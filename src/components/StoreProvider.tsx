@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { pullWorkspace, pushWorkspace, snapshotFromState } from "@/lib/supabase-sync";
+import { pingCloud, pullWorkspace, pushWorkspace, snapshotFromState } from "@/lib/supabase-sync";
 import { getSupabase } from "@/lib/supabase";
 import { useStore } from "@/lib/store";
 
@@ -24,12 +24,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     async function syncCloud() {
       if (!getSupabase()) return;
+      const status = await pingCloud();
+      if (cancelled || status !== "ok") return;
       const remote = await pullWorkspace();
       if (cancelled) return;
       if (remote?.session) {
         useStore.setState({ ...remote, hydrated: true });
       }
       unsubStore = useStore.subscribe((state) => {
+        if (!state.session) return;
         if (pushTimer) clearTimeout(pushTimer);
         pushTimer = setTimeout(() => {
           void pushWorkspace(snapshotFromState(state));
