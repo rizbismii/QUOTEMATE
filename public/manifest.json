@@ -1,0 +1,16 @@
+{
+  "name": "QuoteSnap",
+  "short_name": "QuoteSnap",
+  "description": "Photo to quote for NZ and Australian tradies",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#f1eadc",
+  "theme_color": "#1c1814",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
