@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-paper: #f1eadc;
+  --color-ink: #1c1814;
+  --color-ink-soft: #3f3832;
+  --color-rust: #e24a1b;
+  --color-rust-dark: #c43b12;
+  --color-fern: #1c6b45;
+  --color-card: #fffcf6;
+  --color-line: #e6dccb;
+  --color-steel: #6b645c;
+  --color-gold: #c4a15a;
+  --font-sans: var(--font-figtree);
+  --font-display: var(--font-bricolage);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+}
+
+.doc-sheet {
+  box-shadow: 0 24px 60px rgba(28, 24, 20, 0.1);
+}
+
+.grain {
+  background-image:
+    radial-gradient(ellipse at top left, rgba(226, 74, 27, 0.09), transparent 45%),
+    radial-gradient(ellipse at bottom right, rgba(28, 107, 69, 0.08), transparent 40%);
+}
+
+@media print {
+  nav, header, .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+  .doc-sheet {
+    box-shadow: none;
+  }
+}
