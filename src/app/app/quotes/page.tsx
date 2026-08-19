@@ -2,6 +2,7 @@
 
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatMoney, totals } from "@/lib/money";
+import { quoteViewPath } from "@/lib/paths";
 import { useStore } from "@/lib/store";
 import Link from "next/link";
 
@@ -28,7 +29,7 @@ export default function QuotesPage() {
           return (
             <Link
               key={quote.id}
-              href={`/app/quotes/${quote.id}`}
+              href={quoteViewPath(quote.id)}
               className="block rounded-2xl border border-line bg-card p-4"
             >
               <div className="flex items-start justify-between gap-3">

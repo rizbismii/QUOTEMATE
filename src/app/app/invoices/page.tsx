@@ -3,6 +3,7 @@
 import { PlanGate } from "@/components/PlanGate";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatMoney, invoiceIsOverdue, totals } from "@/lib/money";
+import { invoiceViewPath } from "@/lib/paths";
 import { useStore } from "@/lib/store";
 import Link from "next/link";
 
@@ -24,7 +25,7 @@ export default function InvoicesPage() {
             return (
               <Link
                 key={invoice.id}
-                href={`/app/invoices/${invoice.id}`}
+                href={invoiceViewPath(invoice.id)}
                 className="block rounded-2xl border border-line bg-card p-4"
               >
                 <div className="flex items-start justify-between">

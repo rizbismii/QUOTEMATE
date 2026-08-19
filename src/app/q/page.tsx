@@ -3,11 +3,11 @@
 import { Button } from "@/components/Button";
 import { QuoteDocument } from "@/components/QuoteDocument";
 import { useStore } from "@/lib/store";
-import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
-export default function PublicQuotePage() {
-  const { token } = useParams<{ token: string }>();
+function PublicQuote() {
+  const token = useSearchParams().get("t") ?? "";
   const quote = useStore((s) => s.quotes.find((item) => item.publicToken === token));
   const business = useStore((s) => s.business);
   const customer = useStore((s) => s.customers.find((item) => item.id === quote?.customerId));
@@ -70,5 +70,13 @@ export default function PublicQuotePage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function PublicQuotePage() {
+  return (
+    <Suspense fallback={<p className="grid min-h-dvh place-items-center">Loading quote…</p>}>
+      <PublicQuote />
+    </Suspense>
   );
 }

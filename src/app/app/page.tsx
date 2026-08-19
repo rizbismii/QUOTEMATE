@@ -3,6 +3,7 @@
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatDateTime } from "@/lib/format";
 import { formatMoney, invoiceIsOverdue, totals } from "@/lib/money";
+import { invoiceViewPath, quoteViewPath } from "@/lib/paths";
 import { formatQuoteAllowance } from "@/lib/plans";
 import { useStore } from "@/lib/store";
 import { ArrowRight, Camera } from "lucide-react";
@@ -75,7 +76,7 @@ export default function DashboardPage() {
             return (
               <Link
                 key={quote.id}
-                href={`/app/quotes/${quote.id}`}
+                href={quoteViewPath(quote.id)}
                 className="flex items-center justify-between rounded-2xl border border-line bg-card p-3"
               >
                 <div>
@@ -109,7 +110,7 @@ export default function DashboardPage() {
             return (
               <Link
                 key={invoice.id}
-                href={`/app/invoices/${invoice.id}`}
+                href={invoiceViewPath(invoice.id)}
                 className="flex items-center justify-between rounded-2xl border border-line bg-card p-3"
               >
                 <div>

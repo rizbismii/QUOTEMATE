@@ -3,10 +3,11 @@
 import { Button } from "@/components/Button";
 import { InvoiceDocument } from "@/components/InvoiceDocument";
 import { useStore } from "@/lib/store";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function PublicInvoicePage() {
-  const { token } = useParams<{ token: string }>();
+function PublicInvoice() {
+  const token = useSearchParams().get("t") ?? "";
   const invoice = useStore((s) => s.invoices.find((item) => item.publicToken === token));
   const business = useStore((s) => s.business);
   const customer = useStore((s) => s.customers.find((item) => item.id === invoice?.customerId));
@@ -41,5 +42,13 @@ export default function PublicInvoicePage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function PublicInvoicePage() {
+  return (
+    <Suspense fallback={<p className="grid min-h-dvh place-items-center">Loading invoice…</p>}>
+      <PublicInvoice />
+    </Suspense>
   );
 }

@@ -7,6 +7,7 @@ import { MoneySummary } from "@/components/MoneySummary";
 import { PhotoGrid } from "@/components/PhotoGrid";
 import { QuoteDocument } from "@/components/QuoteDocument";
 import { VoiceInput } from "@/components/VoiceInput";
+import { quoteViewPath } from "@/lib/paths";
 import { formatQuoteAllowance, remainingQuotes } from "@/lib/plans";
 import { useStore } from "@/lib/store";
 import type { Customer, Photo } from "@/lib/types";
@@ -217,7 +218,7 @@ export default function NewQuotePage() {
               city,
             }}
           />
-          <Button className="w-full" onClick={() => router.push(`/app/quotes/${quote.id}`)}>
+          <Button className="w-full" onClick={() => router.push(quoteViewPath(quote.id))}>
             Open quote to send
           </Button>
         </section>

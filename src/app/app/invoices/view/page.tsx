@@ -5,11 +5,13 @@ import { InvoiceDocument } from "@/components/InvoiceDocument";
 import { PlanGate } from "@/components/PlanGate";
 import { SendSheet } from "@/components/SendSheet";
 import { invoiceIsOverdue } from "@/lib/money";
+import { publicInvoicePath, withBase } from "@/lib/paths";
 import { useStore } from "@/lib/store";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function InvoiceDetailPage() {
-  const { id } = useParams<{ id: string }>();
+function InvoiceDetail() {
+  const id = useSearchParams().get("id") ?? "";
   const invoice = useStore((s) => s.invoices.find((item) => item.id === id));
   const business = useStore((s) => s.business);
   const customer = useStore((s) => s.customers.find((item) => item.id === invoice?.customerId));
@@ -34,7 +36,10 @@ export default function InvoiceDetailPage() {
           <Button variant="secondary" onClick={() => window.print()}>
             Print / PDF
           </Button>
-          <Button variant="secondary" onClick={() => window.open(`/i/${invoice.publicToken}`, "_blank")}>
+          <Button
+            variant="secondary"
+            onClick={() => window.open(withBase(publicInvoicePath(invoice.publicToken)), "_blank")}
+          >
             Customer view
           </Button>
         </div>
@@ -46,5 +51,13 @@ export default function InvoiceDetailPage() {
         <SendSheet kind="invoice" invoice={invoice} />
       </div>
     </PlanGate>
+  );
+}
+
+export default function InvoiceDetailPage() {
+  return (
+    <Suspense fallback={<p className="text-steel">Opening invoice…</p>}>
+      <InvoiceDetail />
+    </Suspense>
   );
 }
