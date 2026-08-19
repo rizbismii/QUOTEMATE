@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/Button";
+import { CloudStatusCard } from "@/components/CloudStatusCard";
 import { Field, Input, Select, Textarea } from "@/components/Field";
 import { TRADE_LABELS } from "@/lib/ai";
 import { taxNumberLabel } from "@/lib/money";
@@ -18,6 +19,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-5">
       <h1 className="font-display text-3xl tracking-tight">Business</h1>
+      <CloudStatusCard />
       <p className="text-sm text-ink-soft">
         These details print on quotes and invoices, including GST for {business.country === "NZ" ? "New Zealand" : "Australia"}.
       </p>

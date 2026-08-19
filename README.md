@@ -53,22 +53,19 @@ npm run build
 npx serve out
 ```
 
-## Supabase (optional cloud job book)
+## Supabase
 
-The schema lives in `supabase/migrations`. After you create a project in the Supabase dashboard:
+QuoteSnap is linked to project `qpvufdxaapbvldpcustp` (`https://qpvufdxaapbvldpcustp.supabase.co`).
+
+The browser uses the **publishable** key. Schema lives in `supabase/migrations`.
+
+If the `workspaces` table is missing, run this in the [SQL editor](https://supabase.com/dashboard/project/qpvufdxaapbvldpcustp/sql/new), or from a machine that is logged in:
 
 ```bash
 npx supabase login
-npx supabase link --project-ref <your-project-ref>
+npx supabase link --project-ref qpvufdxaapbvldpcustp
 npx supabase db push
 ```
-
-Then set GitHub Actions secrets (and `.env.local` for local):
-
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-
-The app still works without Supabase (browser storage). With those keys, the demo job book syncs to the `workspaces` table so customer links can work across devices.
 
 ## Stack
 
