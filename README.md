@@ -32,7 +32,13 @@ QuoteSnap is the front-end of that loop:
 
 This repo is a working product demo. Plans can be switched in-app without taking a card.
 
-## Run it
+## Test it live
+
+**https://rizbismii.github.io/QUOTEMATE/**
+
+Tap **Try the live demo**. Demo login: `sam@halefencing.co.nz` (any password).
+
+## Run it locally
 
 ```bash
 npm install
@@ -42,19 +48,27 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) and tap **Try the live demo**.
 
-Demo login: `sam@halefencing.co.nz` (any password). Demo business: Hale & Co. Fencing, Grey Lynn, Auckland, GST 15%, Business plan.
-
 ```bash
 npm run build
-npm start
+npx serve out
 ```
 
-## What is real vs demo
+## Supabase (optional cloud job book)
 
-- Quotes, invoices, GST, plans, send templates and accountant CSV all run in the browser (local storage).
-- AI descriptions are generated on-device from the voice note, trade, city and NZ/AU rate cards. Plug in a vision model later for true photo analysis.
-- SMS / email / WhatsApp open the device share links (`mailto:`, `sms:`, `wa.me`) and CC the business emails on email.
-- Customer accept/pay links work in the **same browser** as the tradie (the job book is local). A hosted API would make those links work on the customer’s phone.
+The schema lives in `supabase/migrations`. After you create a project in the Supabase dashboard:
+
+```bash
+npx supabase login
+npx supabase link --project-ref <your-project-ref>
+npx supabase db push
+```
+
+Then set GitHub Actions secrets (and `.env.local` for local):
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+The app still works without Supabase (browser storage). With those keys, the demo job book syncs to the `workspaces` table so customer links can work across devices.
 
 ## Stack
 

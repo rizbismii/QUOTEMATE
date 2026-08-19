@@ -1,6 +1,7 @@
 import { greeting } from "./money";
 import { formatDate } from "./format";
 import { toE164 } from "./format";
+import { withBase } from "./paths";
 import type { Business, Country, Customer, SendChannel } from "./types";
 
 export function shareMessage(input: {
@@ -57,8 +58,9 @@ export function buildShareUrl(input: {
 }
 
 export function publicUrl(path: string): string {
-  if (typeof window === "undefined") return path;
-  return `${window.location.origin}${path}`;
+  const prefixed = withBase(path);
+  if (typeof window === "undefined") return prefixed;
+  return `${window.location.origin}${prefixed}`;
 }
 
 export { formatDate };

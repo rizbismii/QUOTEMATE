@@ -1,20 +1,50 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { pullWorkspace, pushWorkspace, snapshotFromState } from "@/lib/supabase-sync";
+import { getSupabase } from "@/lib/supabase";
 import { useStore } from "@/lib/store";
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    let pushTimer: ReturnType<typeof setTimeout> | undefined;
+    let unsubStore: (() => void) | undefined;
+
     const finish = () => {
       useStore.setState({ hydrated: true });
       setReady(true);
     };
-    const unsub = useStore.persist.onFinishHydration(finish);
+
+    const unsubHydrate = useStore.persist.onFinishHydration(finish);
     useStore.persist.rehydrate();
     if (useStore.persist.hasHydrated()) finish();
-    return unsub;
+
+    async function syncCloud() {
+      if (!getSupabase()) return;
+      const remote = await pullWorkspace();
+      if (cancelled) return;
+      if (remote?.session) {
+        useStore.setState({ ...remote, hydrated: true });
+      }
+      unsubStore = useStore.subscribe((state) => {
+        if (pushTimer) clearTimeout(pushTimer);
+        pushTimer = setTimeout(() => {
+          void pushWorkspace(snapshotFromState(state));
+        }, 600);
+      });
+    }
+
+    void syncCloud();
+
+    return () => {
+      cancelled = true;
+      unsubHydrate();
+      unsubStore?.();
+      if (pushTimer) clearTimeout(pushTimer);
+    };
   }, []);
 
   if (!ready) {

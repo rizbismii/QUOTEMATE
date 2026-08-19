@@ -2,6 +2,7 @@
 
 import { formatMoney, totals } from "@/lib/money";
 import { formatDate } from "@/lib/format";
+import { publicInvoicePath, publicQuotePath } from "@/lib/paths";
 import { buildShareUrl, mailSubject, publicUrl, shareMessage } from "@/lib/share";
 import { useStore } from "@/lib/store";
 import type { Invoice, Quote, SendChannel } from "@/lib/types";
@@ -30,7 +31,7 @@ export function SendSheet({
   if (!customer) return null;
 
   const money = totals(record.lineItems, business.country, business.gstRegistered);
-  const path = quote ? `/q/${quote.publicToken}` : `/i/${invoice!.publicToken}`;
+  const path = quote ? publicQuotePath(quote.publicToken) : publicInvoicePath(invoice!.publicToken);
   const url = publicUrl(path);
   const dueOrValid = quote
     ? formatDate(quote.validUntil, business.country)

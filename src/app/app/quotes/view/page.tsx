@@ -9,14 +9,15 @@ import { QuoteDocument } from "@/components/QuoteDocument";
 import { SendSheet } from "@/components/SendSheet";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Field, Input, Textarea } from "@/components/Field";
-import { useStore } from "@/lib/store";
+import { invoiceViewPath, publicQuotePath, withBase } from "@/lib/paths";
 import { publicUrl } from "@/lib/share";
+import { useStore } from "@/lib/store";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
-export default function QuoteDetailPage() {
-  const { id } = useParams<{ id: string }>();
+function QuoteDetail() {
+  const id = useSearchParams().get("id") ?? "";
   const router = useRouter();
   const quote = useStore((s) => s.quotes.find((item) => item.id === id));
   const business = useStore((s) => s.business);
@@ -32,8 +33,10 @@ export default function QuoteDetailPage() {
   function convert() {
     if (!quote) return;
     const result = convertToInvoice(quote.id);
-    if (result.ok) router.push(`/app/invoices/${result.invoice.id}`);
+    if (result.ok) router.push(invoiceViewPath(result.invoice.id));
   }
+
+  const customerPath = publicQuotePath(quote.publicToken);
 
   return (
     <div className="space-y-4">
@@ -56,10 +59,7 @@ export default function QuoteDetailPage() {
             </Button>
           </PlanGate>
         ) : (
-          <Button
-            variant="secondary"
-            onClick={() => window.open(`/q/${quote.publicToken}`, "_blank")}
-          >
+          <Button variant="secondary" onClick={() => window.open(withBase(customerPath), "_blank")}>
             Preview as customer
           </Button>
         )}
@@ -98,10 +98,18 @@ export default function QuoteDetailPage() {
       <SendSheet kind="quote" quote={quote} />
       <p className="text-xs text-steel">
         Customer link:{" "}
-        <Link className="font-semibold text-rust" href={`/q/${quote.publicToken}`}>
-          {publicUrl(`/q/${quote.publicToken}`)}
+        <Link className="font-semibold text-rust" href={customerPath}>
+          {publicUrl(customerPath)}
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function QuoteDetailPage() {
+  return (
+    <Suspense fallback={<p className="text-steel">Opening quote…</p>}>
+      <QuoteDetail />
+    </Suspense>
   );
 }
