@@ -29,8 +29,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
           <Link
             href="/app/settings"
-            className="rounded-full border border-line bg-card px-3 py-1 text-xs font-semibold"
+            className="flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs font-semibold"
           >
+            {business.logoDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={business.logoDataUrl} alt="" className="h-5 w-5 rounded object-contain" />
+            ) : null}
             {business.country} · {business.plan}
           </Link>
         </div>

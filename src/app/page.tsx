@@ -15,7 +15,7 @@ const steps = [
   { icon: FileText, title: "AI writes the quote", copy: "A job description plus labour and materials, GST included." },
   { icon: Smartphone, title: "Send it", copy: "SMS, email or WhatsApp. You’re CC’d automatically." },
   { icon: Check, title: "Customer accepts", copy: "They tap a link. No printing, no chasing paper." },
-  { icon: Receipt, title: "Invoice & get paid", copy: "One tap converts the quote. Track unpaid. Remind. Export GST." },
+  { icon: Receipt, title: "Invoice & get paid", copy: "Your logo on every invoice. Send a Pay button for Visa, Mastercard or bank transfer." },
 ];
 
 export default function LandingPage() {

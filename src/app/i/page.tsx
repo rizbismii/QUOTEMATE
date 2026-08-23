@@ -1,8 +1,10 @@
 "use client";
 
-import { Button } from "@/components/Button";
 import { InvoiceDocument } from "@/components/InvoiceDocument";
+import { PayNowLink } from "@/components/PayButton";
+import { publicPayPath } from "@/lib/paths";
 import { useStore } from "@/lib/store";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
@@ -32,12 +34,17 @@ function PublicInvoice() {
           <p className="rounded-2xl bg-fern/15 p-4 font-semibold text-fern">Thanks — this invoice is marked paid.</p>
         ) : (
           <>
-            <p className="text-sm text-ink-soft">
-              Pay by bank transfer using the details on the invoice, then tap below if you’re testing the demo.
-            </p>
-            <Button className="w-full" onClick={() => markInvoicePaid(invoice.id)}>
-              Simulate payment received
-            </Button>
+            <PayNowLink business={business} invoice={invoice} />
+            <Link href={publicPayPath(invoice.publicToken)} className="block text-sm font-semibold text-rust">
+              Open Pay button — Visa, Mastercard or bank transfer
+            </Link>
+            <button
+              type="button"
+              className="text-xs font-semibold text-steel"
+              onClick={() => markInvoicePaid(invoice.id)}
+            >
+              Mark paid on this device
+            </button>
           </>
         )}
       </div>

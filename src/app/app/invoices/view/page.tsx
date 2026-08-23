@@ -5,7 +5,7 @@ import { InvoiceDocument } from "@/components/InvoiceDocument";
 import { PlanGate } from "@/components/PlanGate";
 import { SendSheet } from "@/components/SendSheet";
 import { invoiceIsOverdue } from "@/lib/money";
-import { publicInvoicePath, withBase } from "@/lib/paths";
+import { publicInvoicePath, publicPayPath, withBase } from "@/lib/paths";
 import { useStore } from "@/lib/store";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -41,6 +41,12 @@ function InvoiceDetail() {
             onClick={() => window.open(withBase(publicInvoicePath(invoice.publicToken)), "_blank")}
           >
             Customer view
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => window.open(withBase(publicPayPath(invoice.publicToken)), "_blank")}
+          >
+            Pay button
           </Button>
         </div>
         {overdue && invoice.status !== "paid" ? (

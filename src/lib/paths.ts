@@ -20,3 +20,7 @@ export function publicQuotePath(token: string): string {
 export function publicInvoicePath(token: string): string {
   return `/i/?t=${encodeURIComponent(token)}`;
 }
+
+export function publicPayPath(token: string): string {
+  return `/pay/?t=${encodeURIComponent(token)}`;
+}

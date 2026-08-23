@@ -19,6 +19,11 @@ const business: Business = {
   paymentTermsDays: 7,
   ccEmails: [],
   plan: "business",
+  logoDataUrl: "",
+  payButtonUrl: "",
+  acceptVisa: true,
+  acceptMastercard: true,
+  acceptBankTransfer: true,
 };
 
 const customers: Customer[] = [

@@ -61,6 +61,7 @@ export const PLANS: Plan[] = [
       "One-tap quote → invoice",
       "GST on invoices",
       "Payment tracking & reminders",
+      "Pay button — Visa, Mastercard or bank transfer",
       "Export for your accountant",
     ],
   },

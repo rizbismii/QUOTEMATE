@@ -13,16 +13,20 @@ export function shareMessage(input: {
   business: Business;
   customer: Customer;
   url: string;
+  payUrl?: string;
+  payMethodsLabel?: string;
 }): string {
   const hi = greeting(input.business.country);
   const who = input.customer.name.split(" ")[0] || "there";
+  const methods = input.payMethodsLabel || "Visa, Mastercard or bank transfer";
+  const pay = input.payUrl || input.url;
   if (input.kind === "quote") {
     return `${hi} ${who}, ${input.business.name} has sent quote ${input.number} for ${input.title} — ${input.totalLabel}. Valid until ${input.dueOrValid}. View and accept here: ${input.url}`;
   }
   if (input.kind === "reminder") {
-    return `${hi} ${who}, friendly reminder that invoice ${input.number} (${input.totalLabel}) was due ${input.dueOrValid}. Pay by bank transfer to ${input.business.bankAccount} or open: ${input.url} — ${input.business.name}`;
+    return `${hi} ${who}, friendly reminder that invoice ${input.number} (${input.totalLabel}) was due ${input.dueOrValid}. Pay now (${methods}): ${pay} — ${input.business.name}`;
   }
-  return `${hi} ${who}, invoice ${input.number} from ${input.business.name} for ${input.title} is ${input.totalLabel}, due ${input.dueOrValid}. View and pay: ${input.url}`;
+  return `${hi} ${who}, invoice ${input.number} from ${input.business.name} for ${input.title} is ${input.totalLabel}, due ${input.dueOrValid}. Pay now (${methods}): ${pay}`;
 }
 
 export function mailSubject(kind: "quote" | "invoice" | "reminder", number: string, businessName: string): string {

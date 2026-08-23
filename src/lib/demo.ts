@@ -19,7 +19,27 @@ export const emptyBusiness = (): Business => ({
   paymentTermsDays: 7,
   ccEmails: [],
   plan: "free",
+  logoDataUrl: "",
+  payButtonUrl: "",
+  acceptVisa: true,
+  acceptMastercard: true,
+  acceptBankTransfer: true,
 });
+
+export function normalizeBusiness(input?: Partial<Business> | null): Business {
+  return { ...emptyBusiness(), ...input };
+}
+
+const haleLogo =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="80" viewBox="0 0 240 80">
+    <rect fill="#3a2a16" width="240" height="80" rx="12"/>
+    <rect fill="#d9b36a" x="16" y="18" width="8" height="44"/>
+    <rect fill="#c48a3a" x="28" y="22" width="8" height="40"/>
+    <rect fill="#d9b36a" x="40" y="16" width="8" height="46"/>
+    <text x="62" y="36" fill="#f4efe4" font-family="Arial, sans-serif" font-size="18" font-weight="700">HALE &amp; CO.</text>
+    <text x="62" y="56" fill="#d9b36a" font-family="Arial, sans-serif" font-size="11" letter-spacing="2">FENCING</text>
+  </svg>`);
 
 const demoPhotos = {
   fence: {
@@ -253,6 +273,11 @@ export function demoState(): AppState {
       paymentTermsDays: 7,
       ccEmails: ["office@halefencing.co.nz"],
       plan: "business",
+      logoDataUrl: haleLogo,
+      payButtonUrl: "",
+      acceptVisa: true,
+      acceptMastercard: true,
+      acceptBankTransfer: true,
     },
     customers,
     quotes,
