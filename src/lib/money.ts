@@ -24,25 +24,26 @@ export function gstRate(country: Country, gstRegistered: boolean): number {
 }
 
 export function totals(
-  lineItems: Pick<LineItem, "quantity" | "unitPrice">[],
+  lineItems: Pick<LineItem, "quantity" | "unitPrice">[] | undefined,
   country: Country,
   gstRegistered: boolean,
 ) {
-  const subtotal = roundMoney(lineItems.reduce((sum, item) => sum + lineAmount(item), 0));
-  const rate = gstRate(country, gstRegistered);
+  const subtotal = roundMoney((lineItems ?? []).reduce((sum, item) => sum + lineAmount(item), 0));
+  const rate = gstRate(country === "AU" ? "AU" : "NZ", gstRegistered);
   const gst = roundMoney(subtotal * rate);
   const total = roundMoney(subtotal + gst);
   return { subtotal, gst, total, rate };
 }
 
 export function formatMoney(value: number, country: Country, withCode = false): string {
+  const safe = country === "AU" ? "AU" : "NZ";
   const abs = Math.abs(value);
-  const formatted = abs.toLocaleString(country === "NZ" ? "en-NZ" : "en-AU", {
+  const formatted = abs.toLocaleString(safe === "NZ" ? "en-NZ" : "en-AU", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  const signed = value < 0 ? `-${CURRENCY[country].symbol}${formatted}` : `${CURRENCY[country].symbol}${formatted}`;
-  return withCode ? `${signed} ${CURRENCY[country].code}` : signed;
+  const signed = value < 0 ? `-${CURRENCY[safe].symbol}${formatted}` : `${CURRENCY[safe].symbol}${formatted}`;
+  return withCode ? `${signed} ${CURRENCY[safe].code}` : signed;
 }
 
 export function gstLabel(country: Country): string {

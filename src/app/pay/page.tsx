@@ -2,37 +2,92 @@
 
 import { BusinessBrand } from "@/components/BusinessBrand";
 import { Button } from "@/components/Button";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PayOptions } from "@/components/PayButton";
+import { normalizeBusiness } from "@/lib/demo";
 import { formatMoney } from "@/lib/money";
-import { publicInvoicePath } from "@/lib/paths";
+import { publicInvoicePath, withBase } from "@/lib/paths";
 import { invoiceTotal, payMethodLabel } from "@/lib/pay";
+import { findPublicInvoice } from "@/lib/supabase-sync";
 import { useStore } from "@/lib/store";
-import Link from "next/link";
+import type { Business, Customer, Invoice } from "@/lib/types";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+
+function readToken(search: { get: (key: string) => string | null }): string {
+  const fromRouter = search.get("t")?.trim();
+  if (fromRouter) return fromRouter;
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get("t")?.trim() ?? "";
+}
 
 function PayCheckout() {
-  const token = useSearchParams().get("t") ?? "";
-  const invoice = useStore((s) => (s.invoices ?? []).find((item) => item.publicToken === token));
-  const business = useStore((s) => s.business);
-  const customer = useStore((s) => (s.customers ?? []).find((item) => item.id === invoice?.customerId));
-  const markInvoicePaid = useStore((s) => s.markInvoicePaid);
+  const search = useSearchParams();
+  const [token, setToken] = useState(() => readToken(search));
+  const [cloud, setCloud] = useState<{ invoice: Invoice; business: Business; customer?: Customer } | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "missing">("loading");
   const [notice, setNotice] = useState("");
+
+  const storeInvoice = useStore((s) => (s.invoices ?? []).find((item) => item.publicToken === token));
+  const storeBusiness = useStore((s) => s.business);
+  const storeCustomer = useStore((s) => (s.customers ?? []).find((item) => item.id === storeInvoice?.customerId));
+  const markInvoicePaid = useStore((s) => s.markInvoicePaid);
+
+  useEffect(() => {
+    setToken(readToken(search));
+  }, [search]);
+
+  useEffect(() => {
+    if (!token) {
+      setStatus("missing");
+      return;
+    }
+    if (storeInvoice && storeCustomer) {
+      setStatus("ready");
+      return;
+    }
+    let cancelled = false;
+    setStatus("loading");
+    void findPublicInvoice(token)
+      .then((found) => {
+        if (cancelled) return;
+        setCloud(found);
+        setStatus(found ? "ready" : "missing");
+      })
+      .catch(() => {
+        if (!cancelled) setStatus("missing");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, storeInvoice, storeCustomer]);
+
+  const invoice = storeInvoice ?? cloud?.invoice;
+  const business = normalizeBusiness(storeInvoice ? storeBusiness : cloud?.business);
+  const customer = storeInvoice ? storeCustomer : cloud?.customer;
+
+  if (status === "loading") {
+    return (
+      <main className="grid min-h-dvh place-items-center px-4 text-center">
+        <p className="text-sm text-steel">Opening Pay button…</p>
+      </main>
+    );
+  }
 
   if (!invoice || !customer) {
     return (
       <main className="grid min-h-dvh place-items-center px-4 text-center">
-        <p>This pay link isn’t on this device. Open it in the same browser the tradie used, or ask them to resend.</p>
+        <div>
+          <p className="font-display text-2xl">Pay link not found</p>
+          <p className="mt-2 text-sm text-ink-soft">
+            Ask the tradie to send the Pay button again, or open this link on the device they used.
+          </p>
+        </div>
       </main>
     );
   }
 
   const due = formatMoney(invoiceTotal(invoice, business), business.country, true);
-
-  function openCard(href: string) {
-    window.open(href, "_blank", "noopener,noreferrer");
-    setNotice("Card checkout opened. Mark the invoice paid once the payment lands.");
-  }
 
   return (
     <main className="mx-auto max-w-md px-4 py-10">
@@ -52,7 +107,10 @@ function PayCheckout() {
           <PayOptions
             business={business}
             invoice={invoice}
-            onPayCard={openCard}
+            onPayCard={(href) => {
+              window.open(href, "_blank", "noopener,noreferrer");
+              setNotice("Card checkout opened. Mark the invoice paid once the payment lands.");
+            }}
             onPaidBank={() => {
               markInvoicePaid(invoice.id);
               setNotice("Marked paid. The tradie will see this on their job book.");
@@ -73,17 +131,22 @@ function PayCheckout() {
           {notice ? <p className="text-sm text-ink-soft">{notice}</p> : null}
         </div>
       )}
-      <Link href={publicInvoicePath(invoice.publicToken)} className="mt-8 block text-center text-sm font-semibold text-rust">
+      <a
+        href={withBase(publicInvoicePath(invoice.publicToken))}
+        className="mt-8 block text-center text-sm font-semibold text-rust"
+      >
         View full invoice
-      </Link>
+      </a>
     </main>
   );
 }
 
 export default function PayPage() {
   return (
-    <Suspense fallback={<p className="grid min-h-dvh place-items-center">Opening Pay button…</p>}>
-      <PayCheckout />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<p className="grid min-h-dvh place-items-center">Opening Pay button…</p>}>
+        <PayCheckout />
+      </Suspense>
+    </ErrorBoundary>
   );
 }

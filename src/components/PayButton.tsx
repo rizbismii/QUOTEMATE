@@ -1,3 +1,5 @@
+"use client";
+
 import { cardCheckoutUrl, payMethodLabel, payMethods } from "@/lib/pay";
 import { publicPayPath } from "@/lib/paths";
 import { publicUrl } from "@/lib/share";

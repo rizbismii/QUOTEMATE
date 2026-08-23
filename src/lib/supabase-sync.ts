@@ -1,6 +1,6 @@
 import { normalizeBusiness } from "./demo";
 import { DEMO_WORKSPACE_ID, getSupabase } from "./supabase";
-import type { AppState } from "./types";
+import type { AppState, Business, Customer, Invoice } from "./types";
 
 type Snapshot = Omit<AppState, "hydrated">;
 
@@ -38,6 +38,25 @@ export async function pushWorkspace(snapshot: Snapshot): Promise<void> {
   if (error) {
     console.warn("QuoteSnap cloud sync skipped:", error.message);
   }
+}
+
+export async function findPublicInvoice(token: string): Promise<{
+  invoice: Invoice;
+  business: Business;
+  customer?: Customer;
+} | null> {
+  const client = getSupabase();
+  if (!client || !token) return null;
+  const { data, error } = await client.from("workspaces").select("payload");
+  if (error || !data?.length) return null;
+  for (const row of data) {
+    const payload = row.payload as Partial<AppState> | null;
+    const invoice = (payload?.invoices ?? []).find((item) => item.publicToken === token);
+    if (!invoice) continue;
+    const customer = (payload?.customers ?? []).find((item) => item.id === invoice.customerId);
+    return { invoice, business: normalizeBusiness(payload?.business), customer };
+  }
+  return null;
 }
 
 export function snapshotFromState(state: AppState): Snapshot {
