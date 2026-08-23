@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { normalizeBusiness } from "@/lib/demo";
 import { pingCloud, pullWorkspace, pushWorkspace, snapshotFromState } from "@/lib/supabase-sync";
 import { getSupabase } from "@/lib/supabase";
@@ -8,20 +8,35 @@ import { useStore } from "@/lib/store";
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
+  const finished = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
     let pushTimer: ReturnType<typeof setTimeout> | undefined;
     let unsubStore: (() => void) | undefined;
+    let unsubHydrate: (() => void) | undefined;
 
     const finish = () => {
-      useStore.setState({ hydrated: true });
+      if (finished.current || cancelled) return;
+      finished.current = true;
+      useStore.setState({
+        hydrated: true,
+        business: normalizeBusiness(useStore.getState().business),
+        invoices: useStore.getState().invoices ?? [],
+        customers: useStore.getState().customers ?? [],
+        quotes: useStore.getState().quotes ?? [],
+      });
       setReady(true);
     };
 
-    const unsubHydrate = useStore.persist.onFinishHydration(finish);
-    useStore.persist.rehydrate();
-    if (useStore.persist.hasHydrated()) finish();
+    try {
+      unsubHydrate = useStore.persist.onFinishHydration(finish);
+      void Promise.resolve(useStore.persist.rehydrate()).catch(finish);
+      if (useStore.persist.hasHydrated()) finish();
+    } catch {
+      finish();
+    }
+    const timeout = window.setTimeout(finish, 2500);
 
     async function syncCloud() {
       if (!getSupabase()) return;
@@ -53,7 +68,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       cancelled = true;
-      unsubHydrate();
+      window.clearTimeout(timeout);
+      unsubHydrate?.();
       unsubStore?.();
       if (pushTimer) clearTimeout(pushTimer);
     };

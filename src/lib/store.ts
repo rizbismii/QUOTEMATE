@@ -382,7 +382,7 @@ export const useStore = create<AppState & Actions>()(
         })),
     }),
     {
-      name: "quotesnap-v1",
+      name: "quotesnap-v2",
       skipHydration: true,
       partialize: (state) => {
         const { hydrated: _hydrated, ...rest } = state;

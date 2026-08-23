@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { financialYear, gstRate, roundMoney, totals } from "./money";
+import { financialYear, formatMoney, gstRate, roundMoney, totals } from "./money";
 import type { LineItem } from "./types";
 
 const items = (rows: Array<Pick<LineItem, "quantity" | "unitPrice">>) => rows;
@@ -18,6 +18,11 @@ describe("GST", () => {
     const money = totals(items([{ quantity: 1, unitPrice: 100 }]), "AU", true);
     expect(money.gst).toBe(10);
     expect(money.total).toBe(110);
+  });
+
+  it("tolerates missing line items and country", () => {
+    expect(totals(undefined, undefined as unknown as "NZ", true).total).toBe(0);
+    expect(formatMoney(10, undefined as unknown as "NZ", true)).toBe("$10.00 NZD");
   });
 
   it("charges no GST when not registered", () => {
