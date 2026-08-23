@@ -142,7 +142,7 @@ export default function SettingsPage() {
           hint="Paste your Stripe, Windcave, Flik or PayPal checkout URL. Leave blank to use QuoteSnap’s pay page plus bank transfer."
         >
           <Input
-            value={business.payButtonUrl}
+            value={business.payButtonUrl ?? ""}
             onChange={(e) => updateBusiness({ payButtonUrl: e.target.value })}
             placeholder="https://checkout.stripe.com/c/pay/..."
           />
@@ -150,7 +150,7 @@ export default function SettingsPage() {
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={business.acceptVisa}
+            checked={business.acceptVisa !== false}
             onChange={(e) => updateBusiness({ acceptVisa: e.target.checked })}
           />
           Visa
@@ -158,7 +158,7 @@ export default function SettingsPage() {
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={business.acceptMastercard}
+            checked={business.acceptMastercard !== false}
             onChange={(e) => updateBusiness({ acceptMastercard: e.target.checked })}
           />
           Mastercard
@@ -166,7 +166,7 @@ export default function SettingsPage() {
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={business.acceptBankTransfer}
+            checked={business.acceptBankTransfer !== false}
             onChange={(e) => updateBusiness({ acceptBankTransfer: e.target.checked })}
           />
           Bank transfer

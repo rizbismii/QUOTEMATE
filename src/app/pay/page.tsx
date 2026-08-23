@@ -13,9 +13,9 @@ import { Suspense, useState } from "react";
 
 function PayCheckout() {
   const token = useSearchParams().get("t") ?? "";
-  const invoice = useStore((s) => s.invoices.find((item) => item.publicToken === token));
+  const invoice = useStore((s) => (s.invoices ?? []).find((item) => item.publicToken === token));
   const business = useStore((s) => s.business);
-  const customer = useStore((s) => s.customers.find((item) => item.id === invoice?.customerId));
+  const customer = useStore((s) => (s.customers ?? []).find((item) => item.id === invoice?.customerId));
   const markInvoicePaid = useStore((s) => s.markInvoicePaid);
   const [notice, setNotice] = useState("");
 

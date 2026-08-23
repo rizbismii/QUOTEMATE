@@ -21,8 +21,8 @@ export function payMethodLabel(business: Business): string {
   return `${parts.slice(0, -1).join(", ")} or ${parts[parts.length - 1]}`;
 }
 
-export function normalizeHttpUrl(raw: string): string {
-  const trimmed = raw.trim();
+export function normalizeHttpUrl(raw?: string | null): string {
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
   if (!trimmed) return "";
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
@@ -52,11 +52,12 @@ export function invoiceTotal(invoice: Invoice, business: Business): number {
 }
 
 export function cardCheckoutUrl(business: Business, invoice: Invoice): string {
+  const country = business.country === "AU" ? "AU" : "NZ";
   return decoratePayButtonUrl(
-    business.payButtonUrl,
+    business.payButtonUrl ?? "",
     invoice,
     invoiceTotal(invoice, business),
-    CURRENCY[business.country].code,
+    CURRENCY[country].code,
   );
 }
 
