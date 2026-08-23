@@ -2,7 +2,8 @@
 
 import { formatMoney, totals } from "@/lib/money";
 import { formatDate } from "@/lib/format";
-import { publicInvoicePath, publicQuotePath } from "@/lib/paths";
+import { publicInvoicePath, publicPayPath, publicQuotePath } from "@/lib/paths";
+import { payMethodLabel } from "@/lib/pay";
 import { buildShareUrl, mailSubject, publicUrl, shareMessage } from "@/lib/share";
 import { useStore } from "@/lib/store";
 import type { Invoice, Quote, SendChannel } from "@/lib/types";
@@ -33,6 +34,7 @@ export function SendSheet({
   const money = totals(record.lineItems, business.country, business.gstRegistered);
   const path = quote ? publicQuotePath(quote.publicToken) : publicInvoicePath(invoice!.publicToken);
   const url = publicUrl(path);
+  const payUrl = invoice ? publicUrl(publicPayPath(invoice.publicToken)) : undefined;
   const dueOrValid = quote
     ? formatDate(quote.validUntil, business.country)
     : formatDate(invoice!.dueAt, business.country);
@@ -45,6 +47,8 @@ export function SendSheet({
     business,
     customer,
     url,
+    payUrl,
+    payMethodsLabel: invoice ? payMethodLabel(business) : undefined,
   });
   const subject = mailSubject(kind, record.number, business.name);
   const cc = [business.email, ...business.ccEmails].filter(Boolean).join(", ");
@@ -97,6 +101,11 @@ export function SendSheet({
           {copied ? "Copied" : "Copy message"}
         </Button>
       </div>
+      {invoice && payUrl ? (
+        <p className="mt-3 break-all text-xs text-steel">
+          Pay button: <span className="font-semibold text-ink">{payUrl}</span>
+        </p>
+      ) : null}
     </div>
   );
 }

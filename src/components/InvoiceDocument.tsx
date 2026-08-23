@@ -1,8 +1,12 @@
 import { formatDate } from "@/lib/format";
 import { formatMoney, gstLabel, lineAmount, taxNumberLabel, totals } from "@/lib/money";
 import { invoiceIsOverdue } from "@/lib/money";
+import { publicPayPath } from "@/lib/paths";
+import { payMethodLabel } from "@/lib/pay";
+import { publicUrl } from "@/lib/share";
 import type { Business, Customer, Invoice } from "@/lib/types";
-import { Wordmark } from "./Logo";
+import { BusinessBrand } from "./BusinessBrand";
+import { CardMarks, PayNowLink } from "./PayButton";
 import { StatusBadge } from "./StatusBadge";
 
 export function InvoiceDocument({
@@ -20,7 +24,7 @@ export function InvoiceDocument({
   return (
     <article className="doc-sheet mx-auto max-w-2xl bg-card p-6 text-ink sm:p-10">
       <header className="flex items-start justify-between gap-4 border-b border-line pb-6">
-        <Wordmark />
+        <BusinessBrand business={business} fallback="name" />
         <div className="text-right">
           <p className="font-display text-3xl tracking-tight">TAX INVOICE</p>
           <p className="text-sm font-semibold">{invoice.number}</p>
@@ -91,12 +95,33 @@ export function InvoiceDocument({
         </div>
       </div>
 
-      <div className="mt-8 rounded-2xl bg-paper p-4 text-sm">
-        <p className="font-semibold">Pay by bank transfer</p>
-        <p className="mt-1 text-ink-soft">{business.bankName}</p>
-        <p className="font-mono text-base">{business.bankAccount || "Add account in settings"}</p>
-        <p className="mt-2 text-xs text-steel">Use {invoice.number} as the reference.</p>
-      </div>
+      {invoice.status !== "paid" ? (
+        <div className="mt-8 space-y-3 rounded-2xl bg-paper p-4 text-sm">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-semibold">Pay now</p>
+            <CardMarks visa={business.acceptVisa} mastercard={business.acceptMastercard} />
+          </div>
+          <p className="text-ink-soft">
+            One-click Pay button — {payMethodLabel(business)}.
+          </p>
+          <div className="no-print">
+            <PayNowLink business={business} invoice={invoice} />
+          </div>
+          {business.acceptBankTransfer ? (
+            <div className="border-t border-line pt-3">
+              <p className="font-semibold">Or pay by bank transfer</p>
+              <p className="mt-1 text-ink-soft">{business.bankName}</p>
+              <p className="font-mono text-base">{business.bankAccount || "Add account in settings"}</p>
+              <p className="mt-2 text-xs text-steel">Use {invoice.number} as the reference.</p>
+            </div>
+          ) : null}
+          <p className="break-all text-[11px] text-steel">
+            Pay link: {publicUrl(publicPayPath(invoice.publicToken))}
+          </p>
+        </div>
+      ) : (
+        <div className="mt-8 rounded-2xl bg-fern/15 p-4 text-sm font-semibold text-fern">Paid. Thank you.</div>
+      )}
     </article>
   );
 }

@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { generateJob } from "./ai";
-import { emptyBusiness, demoState } from "./demo";
+import { emptyBusiness, demoState, normalizeBusiness } from "./demo";
 import { invoiceNumber, publicToken, quoteNumber, uid } from "./ids";
 import { addDays, todayIso } from "./money";
 import { canCreateQuote, planById } from "./plans";
@@ -388,6 +388,15 @@ export const useStore = create<AppState & Actions>()(
         const { hydrated: _hydrated, ...rest } = state;
         void _hydrated;
         return rest;
+      },
+      merge: (persistedState, currentState) => {
+        const persisted = (persistedState ?? {}) as Partial<AppState>;
+        return {
+          ...currentState,
+          ...persisted,
+          hydrated: currentState.hydrated,
+          business: normalizeBusiness(persisted.business),
+        };
       },
     },
   ),

@@ -1,7 +1,7 @@
 import { formatDate } from "@/lib/format";
 import { formatMoney, gstLabel, lineAmount, taxNumberLabel, totals } from "@/lib/money";
 import type { Business, Customer, Quote } from "@/lib/types";
-import { Wordmark } from "./Logo";
+import { BusinessBrand } from "./BusinessBrand";
 
 export function QuoteDocument({
   quote,
@@ -17,7 +17,7 @@ export function QuoteDocument({
   return (
     <article className="doc-sheet mx-auto max-w-2xl bg-card p-6 text-ink sm:p-10">
       <header className="flex items-start justify-between gap-4 border-b border-line pb-6">
-        <Wordmark />
+        <BusinessBrand business={business} fallback="name" />
         <div className="text-right">
           <p className="font-display text-3xl tracking-tight">QUOTE</p>
           <p className="text-sm font-semibold">{quote.number}</p>

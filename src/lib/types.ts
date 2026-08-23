@@ -48,6 +48,11 @@ export interface Business {
   paymentTermsDays: number;
   ccEmails: string[];
   plan: PlanId;
+  logoDataUrl: string;
+  payButtonUrl: string;
+  acceptVisa: boolean;
+  acceptMastercard: boolean;
+  acceptBankTransfer: boolean;
 }
 
 export interface Customer {
