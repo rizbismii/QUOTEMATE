@@ -40,4 +40,13 @@ describe("pay helpers", () => {
     expect(cardCheckoutUrl(business, invoice)).toContain("https://pay.windcave.com/pay/abc");
     expect(cardCheckoutUrl({ ...emptyBusiness(), payButtonUrl: "" }, invoice)).toBe("");
   });
+
+  it("does not crash when older workspaces omit Pay button fields", () => {
+    const legacy = { ...emptyBusiness() };
+    delete (legacy as { payButtonUrl?: string }).payButtonUrl;
+    delete (legacy as { acceptVisa?: boolean }).acceptVisa;
+    expect(cardCheckoutUrl(legacy, invoice)).toBe("");
+    expect(payMethodLabel(legacy)).toBe("Visa, Mastercard or bank transfer");
+    expect(() => decoratePayButtonUrl(undefined as unknown as string, invoice, 10, "NZD")).not.toThrow();
+  });
 });

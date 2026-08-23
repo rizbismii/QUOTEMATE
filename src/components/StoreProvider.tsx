@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { normalizeBusiness } from "@/lib/demo";
 import { pingCloud, pullWorkspace, pushWorkspace, snapshotFromState } from "@/lib/supabase-sync";
 import { getSupabase } from "@/lib/supabase";
 import { useStore } from "@/lib/store";
@@ -29,7 +30,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const remote = await pullWorkspace();
       if (cancelled) return;
       if (remote?.session) {
-        useStore.setState({ ...remote, hydrated: true });
+        useStore.setState({
+          ...remote,
+          business: normalizeBusiness(remote.business),
+          customers: remote.customers ?? [],
+          quotes: remote.quotes ?? [],
+          invoices: remote.invoices ?? [],
+          activities: remote.activities ?? [],
+          hydrated: true,
+        });
       }
       unsubStore = useStore.subscribe((state) => {
         if (!state.session) return;

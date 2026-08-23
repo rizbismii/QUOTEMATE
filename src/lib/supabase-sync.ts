@@ -1,3 +1,4 @@
+import { normalizeBusiness } from "./demo";
 import { DEMO_WORKSPACE_ID, getSupabase } from "./supabase";
 import type { AppState } from "./types";
 
@@ -42,7 +43,7 @@ export async function pushWorkspace(snapshot: Snapshot): Promise<void> {
 export function snapshotFromState(state: AppState): Snapshot {
   return {
     session: state.session,
-    business: state.business,
+    business: normalizeBusiness(state.business),
     customers: state.customers,
     quotes: state.quotes,
     invoices: state.invoices,
