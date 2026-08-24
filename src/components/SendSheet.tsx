@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/format";
 import { publicInvoicePath, publicPayPath, publicQuotePath } from "@/lib/paths";
 import { payMethodLabel } from "@/lib/pay";
 import { buildShareUrl, mailSubject, publicUrl, shareMessage } from "@/lib/share";
+import { openQuoteHtmlEmail, quoteEmailHtml } from "@/lib/quote-email";
 import { useStore } from "@/lib/store";
 import type { Invoice, Quote, SendChannel } from "@/lib/types";
 import { Copy, Mail, MessageCircle, MessageSquare, Link as LinkIcon } from "lucide-react";
@@ -25,6 +26,7 @@ export function SendSheet({
   const sendQuote = useStore((s) => s.sendQuote);
   const sendReminder = useStore((s) => s.sendReminder);
   const [copied, setCopied] = useState(false);
+  const [emailNote, setEmailNote] = useState("");
 
   const record = quote ?? invoice;
   if (!record) return null;
@@ -66,8 +68,30 @@ export function SendSheet({
     setTimeout(() => setCopied(false), 2000);
   }
 
-  function open(channel: SendChannel) {
+  async function open(channel: SendChannel) {
     if (!customer) return;
+    if (channel === "email" && quote) {
+      mark("email");
+      const html = quoteEmailHtml({
+        quote,
+        business,
+        customer,
+        viewUrl: url,
+      });
+      const result = await openQuoteHtmlEmail({
+        to: customer.email,
+        cc: cc || undefined,
+        subject,
+        html,
+        fileName: `${quote.number}.eml`,
+      });
+      if (result === "downloaded") {
+        setEmailNote("Quote email saved. Open the .eml file in Gmail or Mail to send the quote with Accept and Decline buttons.");
+      } else if (result === "shared") {
+        setEmailNote("Choose Gmail or Mail to send the quote with Accept and Decline buttons.");
+      }
+      return;
+    }
     const href = buildShareUrl({
       channel,
       country: business.country,
@@ -84,7 +108,8 @@ export function SendSheet({
     <div className="rounded-2xl border border-line bg-card p-4">
       <p className="font-display text-lg">Send to customer</p>
       <p className="mt-1 text-xs text-steel">
-        Opens SMS, email or WhatsApp on this device. Creator copy goes to {cc || "your business email"}.
+        Email sends the full quote with Accept and Decline buttons. SMS and WhatsApp open on this
+        phone. Creator copy goes to {cc || "your business email"}.
       </p>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Button type="button" variant="secondary" onClick={() => open("email")}>
@@ -106,9 +131,18 @@ export function SendSheet({
           Pay button: <span className="font-semibold text-ink">{payUrl}</span>
         </p>
       ) : null}
-      <pre className="mt-3 whitespace-pre-wrap rounded-xl bg-paper px-3 py-2 text-xs text-ink-soft">
-        {kind === "quote" ? `Subject: ${subject}\n\n${body}` : body}
-      </pre>
+      {emailNote ? <p className="mt-3 text-xs text-ink-soft">{emailNote}</p> : null}
+      {quote ? (
+        <iframe
+          title="Quote email preview"
+          className="mt-3 h-[420px] w-full rounded-xl border border-line bg-paper"
+          srcDoc={quoteEmailHtml({ quote, business, customer, viewUrl: url })}
+        />
+      ) : (
+        <pre className="mt-3 whitespace-pre-wrap rounded-xl bg-paper px-3 py-2 text-xs text-ink-soft">
+          {body}
+        </pre>
+      )}
     </div>
   );
 }
