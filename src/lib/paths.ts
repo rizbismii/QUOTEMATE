@@ -13,8 +13,9 @@ export function invoiceViewPath(id: string): string {
   return `/app/invoices/view/?id=${encodeURIComponent(id)}`;
 }
 
-export function publicQuotePath(token: string): string {
-  return `/q/?t=${encodeURIComponent(token)}`;
+export function publicQuotePath(token: string, action?: "accept" | "decline"): string {
+  const extra = action ? `&a=${action}` : "";
+  return `/q/?t=${encodeURIComponent(token)}${extra}`;
 }
 
 export function publicInvoicePath(token: string): string {

@@ -2,6 +2,7 @@ import { greeting } from "./money";
 import { formatDate } from "./format";
 import { toE164 } from "./format";
 import { withBase } from "./paths";
+import { quoteActionUrl } from "./quote-email";
 import type { Business, Country, Customer, SendChannel } from "./types";
 
 export function shareMessage(input: {
@@ -27,10 +28,13 @@ export function shareMessage(input: {
       `${input.business.name} has sent quote ${input.number}.`,
       input.title,
       input.totalLabel,
-      `Valid until ${input.dueOrValid}.`,
+      "Valid until ${input.dueOrValid}.",
       "",
-      "Accept quote:",
-      input.url,
+      "Accept:",
+      quoteActionUrl(input.url, "accept"),
+      "",
+      "Decline:",
+      quoteActionUrl(input.url, "decline"),
     ].join("\n");
   }
   if (input.kind === "reminder") {

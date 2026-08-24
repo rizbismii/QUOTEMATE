@@ -27,7 +27,8 @@ describe("share messages", () => {
       customer,
       url: "https://example.com/q/?t=abc",
     });
-    expect(quote).toContain("Accept quote:\nhttps://example.com/q/?t=abc");
+    expect(quote).toContain("Accept:\nhttps://example.com/q/?t=abc&a=accept");
+    expect(quote).toContain("Decline:\nhttps://example.com/q/?t=abc&a=decline");
     expect(quote).toContain("Kia ora Priya,");
     expect(quote).not.toContain("Kia ora Priya, Hale");
   });
@@ -83,7 +84,8 @@ describe("share messages", () => {
     });
     expect(href).toContain("mailto:priya%40example.com?");
     expect(href).toContain("subject=Quote%20QS-0001%20from%20FAZ%20AND%20CO");
-    expect(href).toContain("Accept%20quote");
+    expect(href).toContain("Accept%3A");
+    expect(href).toContain("a%3Daccept");
     expect(href).not.toMatch(/Quote\+QS-0001/);
     expect(href).not.toMatch(/Kia\+ora/);
     expect(mailtoHref("a@b.com", "Hi there", "Hello world")).toBe(

@@ -7,10 +7,12 @@ import { findPublicQuote, patchPublicQuote } from "@/lib/supabase-sync";
 import { useStore } from "@/lib/store";
 import type { Business, Customer, Quote } from "@/lib/types";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 function PublicQuote() {
-  const token = useSearchParams().get("t") ?? "";
+  const search = useSearchParams();
+  const token = search.get("t") ?? "";
+  const action = search.get("a");
   const storeQuote = useStore((s) => s.quotes.find((item) => item.publicToken === token));
   const storeBusiness = useStore((s) => s.business);
   const storeCustomer = useStore((s) => s.customers.find((item) => item.id === storeQuote?.customerId));
@@ -19,6 +21,7 @@ function PublicQuote() {
   const [cloud, setCloud] = useState<{ quote: Quote; business: Business; customer?: Customer } | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "missing">(storeQuote ? "ready" : "loading");
   const [done, setDone] = useState<"accepted" | "declined" | null>(null);
+  const actedRef = useRef(false);
 
   useEffect(() => {
     if (!token) {
@@ -55,6 +58,21 @@ function PublicQuote() {
       : quote?.status === "declined"
         ? "declined"
         : null);
+
+  useEffect(() => {
+    if (status !== "ready" || !quote || !customer || actedRef.current) return;
+    if (action !== "accept" && action !== "decline") return;
+    actedRef.current = true;
+    if (action === "accept") {
+      acceptQuote(token);
+      void patchPublicQuote(token, { status: "accepted", acceptedAt: new Date().toISOString() });
+      setDone("accepted");
+      return;
+    }
+    declineQuote(token);
+    void patchPublicQuote(token, { status: "declined", declinedAt: new Date().toISOString() });
+    setDone("declined");
+  }, [status, quote, customer, action, token, acceptQuote, declineQuote]);
 
   if (status === "loading") {
     return (
@@ -95,7 +113,7 @@ function PublicQuote() {
                 setDone("accepted");
               }}
             >
-              Accept quote
+              Accept
             </Button>
             <Button
               variant="secondary"
