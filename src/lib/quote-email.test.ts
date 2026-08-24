@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyBusiness } from "./demo";
-import { quoteActionUrl, quoteEmailEml, quoteEmailHtml } from "./quote-email";
+import { quoteActionUrl, quoteEmailHtml, quoteEmailText } from "./quote-email";
 import type { Customer, Quote } from "./types";
 
 const business = {
@@ -89,16 +89,17 @@ describe("quote HTML email", () => {
     expect(html).not.toContain("Accept quote:");
   });
 
-  it("wraps the HTML quote in an unsent eml draft", () => {
-    const eml = quoteEmailEml({
-      to: "rizbismii@gmail.com",
-      cc: "Muhammadurizwan@gmail.com",
-      subject: "Quote QS-0001 from Faz and co",
-      html: "<p>quote</p>",
+  it("builds a mailto-friendly quote with Accept and Decline links", () => {
+    const text = quoteEmailText({
+      quote,
+      business,
+      customer,
+      viewUrl: "https://rizbismii.github.io/QUOTEMATE/q/?t=49qo53zi",
     });
-    expect(eml).toContain("Content-Type: text/html; charset=UTF-8");
-    expect(eml).toContain("X-Unsent: 1");
-    expect(eml).toContain("To: rizbismii@gmail.com");
-    expect(eml).toContain("<p>quote</p>");
+    expect(text).toContain("QUOTE QS-0001");
+    expect(text).toContain("Bill to: Jerry");
+    expect(text).toContain("Plumber labour");
+    expect(text).toContain("Accept\nhttps://rizbismii.github.io/QUOTEMATE/q/?t=49qo53zi&a=accept");
+    expect(text).toContain("Decline\nhttps://rizbismii.github.io/QUOTEMATE/q/?t=49qo53zi&a=decline");
   });
 });

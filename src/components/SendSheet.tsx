@@ -4,8 +4,8 @@ import { formatMoney, totals } from "@/lib/money";
 import { formatDate } from "@/lib/format";
 import { publicInvoicePath, publicPayPath, publicQuotePath } from "@/lib/paths";
 import { payMethodLabel } from "@/lib/pay";
-import { buildShareUrl, mailSubject, publicUrl, shareMessage } from "@/lib/share";
-import { openQuoteHtmlEmail, quoteEmailHtml } from "@/lib/quote-email";
+import { quoteEmailHtml, quoteEmailText } from "@/lib/quote-email";
+import { buildShareUrl, mailSubject, openMailto, publicUrl, shareMessage } from "@/lib/share";
 import { useStore } from "@/lib/store";
 import type { Invoice, Quote, SendChannel } from "@/lib/types";
 import { Copy, Mail, MessageCircle, MessageSquare, Link as LinkIcon } from "lucide-react";
@@ -26,7 +26,6 @@ export function SendSheet({
   const sendQuote = useStore((s) => s.sendQuote);
   const sendReminder = useStore((s) => s.sendReminder);
   const [copied, setCopied] = useState(false);
-  const [emailNote, setEmailNote] = useState("");
 
   const record = quote ?? invoice;
   if (!record) return null;
@@ -40,18 +39,20 @@ export function SendSheet({
   const dueOrValid = quote
     ? formatDate(quote.validUntil, business.country)
     : formatDate(invoice!.dueAt, business.country);
-  const body = shareMessage({
-    kind,
-    number: record.number,
-    title: quote?.title ?? invoice!.title,
-    totalLabel: formatMoney(money.total, business.country, true),
-    dueOrValid,
-    business,
-    customer,
-    url,
-    payUrl,
-    payMethodsLabel: invoice ? payMethodLabel(business) : undefined,
-  });
+  const body = quote
+    ? quoteEmailText({ quote, business, customer, viewUrl: url })
+    : shareMessage({
+        kind,
+        number: record.number,
+        title: invoice!.title,
+        totalLabel: formatMoney(money.total, business.country, true),
+        dueOrValid,
+        business,
+        customer,
+        url,
+        payUrl,
+        payMethodsLabel: invoice ? payMethodLabel(business) : undefined,
+      });
   const subject = mailSubject(kind, record.number, business.name);
   const cc = [business.email, ...business.ccEmails].filter(Boolean).join(", ");
 
@@ -68,30 +69,8 @@ export function SendSheet({
     setTimeout(() => setCopied(false), 2000);
   }
 
-  async function open(channel: SendChannel) {
+  function open(channel: SendChannel) {
     if (!customer) return;
-    if (channel === "email" && quote) {
-      mark("email");
-      const html = quoteEmailHtml({
-        quote,
-        business,
-        customer,
-        viewUrl: url,
-      });
-      const result = await openQuoteHtmlEmail({
-        to: customer.email,
-        cc: cc || undefined,
-        subject,
-        html,
-        fileName: `${quote.number}.eml`,
-      });
-      if (result === "downloaded") {
-        setEmailNote("Quote email saved. Open the .eml file in Gmail or Mail to send the quote with Accept and Decline buttons.");
-      } else if (result === "shared") {
-        setEmailNote("Choose Gmail or Mail to send the quote with Accept and Decline buttons.");
-      }
-      return;
-    }
     const href = buildShareUrl({
       channel,
       country: business.country,
@@ -101,15 +80,17 @@ export function SendSheet({
       body,
     });
     mark(channel);
-    if (href) window.open(href, "_blank");
+    if (!href) return;
+    if (channel === "email") openMailto(href);
+    else window.open(href, "_blank");
   }
 
   return (
     <div className="rounded-2xl border border-line bg-card p-4">
       <p className="font-display text-lg">Send to customer</p>
       <p className="mt-1 text-xs text-steel">
-        Email sends the full quote with Accept and Decline buttons. SMS and WhatsApp open on this
-        phone. Creator copy goes to {cc || "your business email"}.
+        Email opens Gmail or Mail on this phone with the quote, Accept, and Decline. Creator copy
+        goes to {cc || "your business email"}.
       </p>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Button type="button" variant="secondary" onClick={() => open("email")}>
@@ -131,7 +112,6 @@ export function SendSheet({
           Pay button: <span className="font-semibold text-ink">{payUrl}</span>
         </p>
       ) : null}
-      {emailNote ? <p className="mt-3 text-xs text-ink-soft">{emailNote}</p> : null}
       {quote ? (
         <iframe
           title="Quote email preview"

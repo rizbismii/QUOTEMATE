@@ -29,7 +29,7 @@ describe("share messages", () => {
     });
     expect(quote).toContain("Accept:\nhttps://example.com/q/?t=abc&a=accept");
     expect(quote).toContain("Decline:\nhttps://example.com/q/?t=abc&a=decline");
-    expect(quote).toContain("Kia ora Priya,");
+    expect(quote).toContain("Valid until 23 Sept 2026.");
     expect(quote).not.toContain("Kia ora Priya, Hale");
   });
 

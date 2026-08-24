@@ -27,8 +27,8 @@ export function shareMessage(input: {
       "",
       `${input.business.name} has sent quote ${input.number}.`,
       input.title,
-      input.totalLabel,
-      "Valid until ${input.dueOrValid}.",
+      `${input.totalLabel}`,
+      `Valid until ${input.dueOrValid}.`,
       "",
       "Accept:",
       quoteActionUrl(input.url, "accept"),
@@ -94,6 +94,15 @@ export function buildShareUrl(input: {
     return `https://wa.me/${toE164(input.customer.phone, input.country)}?text=${encodeURIComponent(input.body)}`;
   }
   return null;
+}
+
+export function openMailto(href: string): void {
+  const link = document.createElement("a");
+  link.href = href;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 export function publicUrl(path: string): string {

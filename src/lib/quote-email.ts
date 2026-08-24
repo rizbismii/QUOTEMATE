@@ -1,5 +1,5 @@
 import { formatDate } from "./format";
-import { formatMoney, gstLabel, lineAmount, registrationNumberLabel, taxNumberLabel, totals } from "./money";
+import { formatMoney, greeting, gstLabel, lineAmount, registrationNumberLabel, taxNumberLabel, totals } from "./money";
 import type { Business, Customer, Quote } from "./types";
 
 function esc(value: string): string {
@@ -167,55 +167,58 @@ export function quoteEmailHtml(input: {
 </html>`;
 }
 
-export function quoteEmailEml(input: {
-  to: string;
-  cc?: string;
-  subject: string;
-  html: string;
+export function quoteEmailText(input: {
+  quote: Quote;
+  business: Business;
+  customer: Customer;
+  viewUrl: string;
 }): string {
-  const headers = [
-    `To: ${input.to}`,
-    input.cc ? `Cc: ${input.cc}` : "",
-    `Subject: ${input.subject}`,
-    "X-Unsent: 1",
-    "MIME-Version: 1.0",
-    "Content-Type: text/html; charset=UTF-8",
-    "Content-Transfer-Encoding: 8bit",
+  const { quote, business, customer, viewUrl } = input;
+  const money = totals(quote.lineItems, business.country, business.gstRegistered);
+  const acceptUrl = quoteActionUrl(viewUrl, "accept");
+  const declineUrl = quoteActionUrl(viewUrl, "decline");
+  const items = quote.lineItems
+    .map(
+      (item) =>
+        `${item.description} (${item.kind}) — ${item.quantity} ${item.unit} × ${formatMoney(item.unitPrice, business.country)} = ${formatMoney(lineAmount(item), business.country)}`,
+    )
+    .join("\n");
+  return [
+    `${greeting(business.country)} ${customer.name.split(" ")[0] || "there"},`,
     "",
-    input.html,
-  ].filter((line) => line !== "");
-  return headers.join("\r\n");
+    `QUOTE ${quote.number}`,
+    `Valid until ${formatDate(quote.validUntil, business.country)}`,
+    "",
+    `From: ${business.name}`,
+    business.ownerName,
+    business.address,
+    business.phone,
+    business.email,
+    business.gstRegistered && business.taxNumber
+      ? `${taxNumberLabel(business.country)} ${business.taxNumber}`
+      : "Not GST registered",
+    "",
+    `Bill to: ${customer.name}`,
+    quote.jobAddress,
+    customer.email,
+    customer.phone,
+    "",
+    quote.title,
+    quote.description,
+    "",
+    items,
+    "",
+    `Subtotal (ex GST): ${formatMoney(money.subtotal, business.country)}`,
+    `${business.gstRegistered ? gstLabel(business.country) : "GST (n/a)"}: ${formatMoney(money.gst, business.country)}`,
+    `Total: ${formatMoney(money.total, business.country, true)}`,
+    "",
+    "Accept",
+    acceptUrl,
+    "",
+    "Decline",
+    declineUrl,
+  ]
+    .filter((line) => line !== undefined)
+    .join("\n");
 }
 
-export async function openQuoteHtmlEmail(input: {
-  to: string;
-  cc?: string;
-  subject: string;
-  html: string;
-  fileName: string;
-}): Promise<"shared" | "downloaded" | "aborted"> {
-  const eml = quoteEmailEml(input);
-  const file = new File([eml], input.fileName, { type: "message/rfc822" });
-  try {
-    if (typeof navigator !== "undefined" && navigator.share && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: input.subject });
-      return "shared";
-    }
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") return "aborted";
-  }
-  const url = URL.createObjectURL(file);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = input.fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  const preview = URL.createObjectURL(new Blob([input.html], { type: "text/html" }));
-  window.open(preview, "_blank", "noopener");
-  window.setTimeout(() => {
-    URL.revokeObjectURL(url);
-    URL.revokeObjectURL(preview);
-  }, 2000);
-  return "downloaded";
-}
