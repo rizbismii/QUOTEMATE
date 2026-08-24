@@ -66,7 +66,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     async function pullAndMerge(): Promise<boolean> {
       const current = useStore.getState();
       if (!current.hydrated || !current.signedIn || !current.session) return false;
-      if (emailsMatch(current.session.email, DEMO_LOGIN.email)) return false;
+      if (emailsMatch(current.session.email, DEMO_LOGIN.email)) return true;
 
       const email = current.session.email;
       const found = await findWorkspaceByEmail(email);
@@ -81,7 +81,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     async function pushCurrent() {
       const state = useStore.getState();
       if (!state.hydrated || !state.signedIn || !state.session) return;
-      if (emailsMatch(state.session.email, DEMO_LOGIN.email)) return;
       rememberAccount({
         email: state.session.email,
         name: state.session.name,
@@ -115,14 +114,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       unsubStore = useStore.subscribe((state, prev) => {
         if (!state.hydrated || !state.session) return;
-        if (emailsMatch(state.session.email, DEMO_LOGIN.email)) return;
 
+        const isDemo = emailsMatch(state.session.email, DEMO_LOGIN.email);
         const signedInNow = state.signedIn && !prev.signedIn;
         const switchedUser =
           state.signedIn &&
           Boolean(prev.session?.email) &&
           !emailsMatch(prev.session!.email, state.session.email);
-        if (state.signedIn && (signedInNow || switchedUser)) {
+        if (state.signedIn && (signedInNow || switchedUser) && !isDemo) {
           void syncFromCloud();
           return;
         }
