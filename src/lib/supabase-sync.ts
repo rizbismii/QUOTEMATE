@@ -7,6 +7,10 @@ export type Snapshot = Omit<AppState, "hydrated">;
 
 export type CloudStatus = "off" | "ok" | "missing-table" | "error";
 
+function cloudDisabled(): boolean {
+  return Boolean(process.env.VITEST);
+}
+
 export function workspaceIdForEmail(email: string): string {
   const normalized = normalizeEmail(email);
   if (!normalized || emailsMatch(normalized, DEMO_LOGIN.email)) return DEMO_WORKSPACE_ID;
@@ -22,6 +26,7 @@ function snapshotMatchesEmail(snapshot: Partial<AppState> | null | undefined, em
 }
 
 export async function pingCloud(): Promise<CloudStatus> {
+  if (cloudDisabled()) return "off";
   const client = getSupabase();
   if (!client) return "off";
   const { error } = await client.from("workspaces").select("id").eq("id", DEMO_WORKSPACE_ID).maybeSingle();
@@ -31,6 +36,7 @@ export async function pingCloud(): Promise<CloudStatus> {
 }
 
 export async function pullWorkspace(id: string = DEMO_WORKSPACE_ID): Promise<Snapshot | null> {
+  if (cloudDisabled()) return null;
   const client = getSupabase();
   if (!client) return null;
   const { data, error } = await client.from("workspaces").select("payload").eq("id", id).maybeSingle();
@@ -39,6 +45,7 @@ export async function pullWorkspace(id: string = DEMO_WORKSPACE_ID): Promise<Sna
 }
 
 export async function pushWorkspace(snapshot: Snapshot, id?: string): Promise<void> {
+  if (cloudDisabled()) return;
   const client = getSupabase();
   if (!client) return;
   const workspaceId = id || workspaceIdForEmail(snapshot.session?.email || snapshot.business.email);
@@ -55,8 +62,9 @@ export async function pushWorkspace(snapshot: Snapshot, id?: string): Promise<vo
 export async function findWorkspaceByEmail(
   email: string,
 ): Promise<{ id: string; snapshot: Snapshot } | null> {
+  if (cloudDisabled()) return null;
   const client = getSupabase();
-  if (!client || !email.trim()) return null;
+  if (cloudDisabled() || !client || !email.trim()) return null;
   const directId = workspaceIdForEmail(email);
   const direct = await pullWorkspace(directId);
   if (direct && snapshotMatchesEmail(direct, email)) return { id: directId, snapshot: direct };
@@ -99,6 +107,7 @@ export async function findPublicQuote(token: string): Promise<{
 }
 
 async function findPublicRecord(token: string, kind: "quote" | "invoice") {
+  if (cloudDisabled()) return null;
   const client = getSupabase();
   if (!client || !token) return null;
   const { data, error } = await client.from("workspaces").select("id, payload");
@@ -135,6 +144,7 @@ export async function patchPublicQuote(
   token: string,
   patch: Partial<Quote>,
 ): Promise<Quote | undefined> {
+  if (cloudDisabled()) return undefined;
   const client = getSupabase();
   if (!client || !token) return undefined;
   const { data, error } = await client.from("workspaces").select("id, payload");

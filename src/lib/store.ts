@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { generateJob } from "./ai";
 import { emailsMatch, hashPassword, mobileMatches, passwordIsValid, verifyPassword } from "./auth";
+import { findSavedAccount, rememberAccount } from "./account-vault";
 import { emptyBusiness, demoState, DEMO_LOGIN, normalizeBusiness } from "./demo";
 import { invoiceNumber, publicToken, quoteNumber, uid } from "./ids";
 import { addDays, todayIso } from "./money";
@@ -31,6 +32,16 @@ const blank = (): Omit<AppState, "hydrated"> => ({
   quoteSeq: 0,
   invoiceSeq: 0,
 });
+
+function rememberFromState(state: { session: Session | null; business: Business }) {
+  if (!state.session?.email || !state.session.passwordHash) return;
+  rememberAccount({
+    email: state.session.email,
+    name: state.session.name,
+    phone: state.business.phone,
+    passwordHash: state.session.passwordHash,
+  });
+}
 
 interface Actions {
   setHydrated: (value: boolean) => void;
@@ -94,20 +105,35 @@ export const useStore = create<AppState & Actions>()(
 
       signIn: (email, password) => {
         if (emailsMatch(email, DEMO_LOGIN.email) && password === DEMO_LOGIN.password) {
-          set({ ...demoState(), signedIn: true });
+          const demo = demoState();
+          rememberFromState(demo);
+          set({ ...demo, signedIn: true });
           return { ok: true };
         }
         const session = get().session;
-        if (!session) return { ok: false, reason: "missing" };
+        if (!session) {
+          const saved = findSavedAccount(email);
+          if (saved && verifyPassword(password, saved.passwordHash)) {
+            set({
+              signedIn: true,
+              session: { email: saved.email, name: saved.name, passwordHash: saved.passwordHash },
+            });
+            return { ok: true };
+          }
+          return { ok: false, reason: "missing" };
+        }
         if (!emailsMatch(session.email, email)) return { ok: false, reason: "email" };
         if (!session.passwordHash) {
-          set({ session: { ...session, passwordHash: hashPassword(password) }, signedIn: true });
+          const next = { ...session, passwordHash: hashPassword(password) };
+          set({ session: next, signedIn: true });
+          rememberFromState({ ...get(), session: next });
           return { ok: true };
         }
         if (!verifyPassword(password, session.passwordHash)) {
           return { ok: false, reason: "password" };
         }
         set({ signedIn: true });
+        rememberFromState(get());
         return { ok: true };
       },
 
@@ -151,30 +177,37 @@ export const useStore = create<AppState & Actions>()(
           quoteSeq: 0,
           invoiceSeq: 0,
         });
+        rememberFromState(get());
         return { ok: true };
       },
 
       resetPassword: (input) => {
+        if (!passwordIsValid(input.password)) return { ok: false, reason: "password" };
         const state = get();
         const localEmail = state.session?.email || state.business.email;
-        if (!localEmail || !emailsMatch(localEmail, input.email)) {
-          return { ok: false, reason: "email" };
-        }
-        if (!mobileMatches(state.business.phone, input.mobile)) {
-          return { ok: false, reason: "mobile" };
-        }
-        if (!passwordIsValid(input.password)) return { ok: false, reason: "password" };
+        const saved = findSavedAccount(input.email);
+        const localMatch = Boolean(localEmail && emailsMatch(localEmail, input.email));
+        if (!localMatch && !saved) return { ok: false, reason: "email" };
+        const phone = localMatch ? state.business.phone : saved?.phone || "";
+        if (!mobileMatches(phone, input.mobile)) return { ok: false, reason: "mobile" };
+        const passwordHash = hashPassword(input.password);
+        const email = localMatch ? localEmail : saved!.email;
+        const name = localMatch
+          ? state.session?.name || state.business.ownerName
+          : saved!.name;
         set({
-          session: {
-            email: state.session?.email || state.business.email,
-            name: state.session?.name || state.business.ownerName,
-            passwordHash: hashPassword(input.password),
-          },
+          session: { email, name, passwordHash },
+        });
+        rememberAccount({
+          email,
+          name,
+          phone: localMatch ? state.business.phone : saved!.phone,
+          passwordHash,
         });
         return { ok: true };
       },
 
-      applySnapshot: (snapshot, signedIn) =>
+      applySnapshot: (snapshot, signedIn) => {
         set({
           signedIn,
           session: snapshot.session ?? null,
@@ -185,9 +218,15 @@ export const useStore = create<AppState & Actions>()(
           activities: snapshot.activities ?? [],
           quoteSeq: snapshot.quoteSeq ?? 0,
           invoiceSeq: snapshot.invoiceSeq ?? 0,
-        }),
+        });
+        rememberFromState(get());
+      },
 
-      loadDemo: () => set(demoState()),
+      loadDemo: () => {
+        const demo = demoState();
+        rememberFromState(demo);
+        set(demo);
+      },
 
       logout: () => set({ signedIn: false }),
 

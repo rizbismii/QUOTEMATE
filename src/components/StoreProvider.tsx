@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { rememberAccount } from "@/lib/account-vault";
 import { normalizeBusiness } from "@/lib/demo";
 import { pingCloud, pushWorkspace, snapshotFromState, workspaceIdForEmail } from "@/lib/supabase-sync";
 import { getSupabase } from "@/lib/supabase";
@@ -52,6 +53,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
       const current = useStore.getState();
       if (current.signedIn && current.session) {
+        rememberAccount({
+          email: current.session.email,
+          name: current.session.name,
+          phone: current.business.phone,
+          passwordHash: current.session.passwordHash || "",
+        });
         void pushWorkspace(snapshotFromState(current), workspaceIdForEmail(current.session.email));
       }
     }
