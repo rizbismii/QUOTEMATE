@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyBusiness } from "./demo";
-import { quoteActionUrl, quoteEmailHtml, quoteEmailText } from "./quote-email";
+import { quoteActionUrl, quoteEmailHtml, quoteEmailText, quoteMailtoText } from "./quote-email";
 import type { Customer, Quote } from "./types";
 
 const business = {
@@ -89,7 +89,38 @@ describe("quote HTML email", () => {
     expect(html).not.toContain("Accept quote:");
   });
 
-  it("builds a mailto-friendly quote with Accept and Decline links", () => {
+  it("builds a short mailto body with View, Accept and Decline first", () => {
+    const text = quoteMailtoText({
+      quote,
+      business,
+      customer,
+      viewUrl: "https://rizbismii.github.io/QUOTEMATE/q/?t=49qo53zi",
+      totalLabel: "$445.63 NZD",
+    });
+    expect(text.indexOf("View quote:")).toBeLessThan(text.indexOf("Accept:"));
+    expect(text.indexOf("Accept:")).toBeLessThan(text.indexOf("Faz and co has sent"));
+    expect(text).toContain("https://rizbismii.github.io/QUOTEMATE/q/?t=49qo53zi&a=accept");
+    expect(text).toContain("https://rizbismii.github.io/QUOTEMATE/q/?t=49qo53zi&a=decline");
+    expect(text).toContain("paste");
+  });
+
+  it("can omit data-url images so the HTML is small enough to copy into Gmail", () => {
+    const html = quoteEmailHtml({
+      quote: {
+        ...quote,
+        photos: [{ id: "ph1", name: "job.jpg", dataUrl: "data:image/jpeg;base64,AAAA" }],
+      },
+      business: { ...business, logoDataUrl: "data:image/png;base64,BBBB" },
+      customer,
+      viewUrl: "https://rizbismii.github.io/QUOTEMATE/q/?t=49qo53zi",
+      inlineImages: false,
+    });
+    expect(html).not.toContain("data:image");
+    expect(html).toContain("Accept</a>");
+    expect(html).toContain("Site photos are on the quote page.");
+  });
+
+  it("builds a full plain-text quote for the email file", () => {
     const text = quoteEmailText({
       quote,
       business,

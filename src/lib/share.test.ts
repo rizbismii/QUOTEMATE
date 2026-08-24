@@ -16,7 +16,7 @@ const customer: Customer = {
 const business = { ...emptyBusiness(), name: "Hale & Co. Fencing", email: "sam@halefencing.co.nz" };
 
 describe("share messages", () => {
-  it("puts Accept quote on its own lines", () => {
+  it("puts the HTML quote and Accept links first so they survive a short mail app", () => {
     const quote = shareMessage({
       kind: "quote",
       number: "QS-0001",
@@ -27,6 +27,9 @@ describe("share messages", () => {
       customer,
       url: "https://example.com/q/?t=abc",
     });
+    expect(quote.indexOf("View quote:")).toBeLessThan(quote.indexOf("Accept:"));
+    expect(quote.indexOf("Accept:")).toBeLessThan(quote.indexOf("Hale & Co"));
+    expect(quote).toContain("View quote:\nhttps://example.com/q/?t=abc");
     expect(quote).toContain("Accept:\nhttps://example.com/q/?t=abc&a=accept");
     expect(quote).toContain("Decline:\nhttps://example.com/q/?t=abc&a=decline");
     expect(quote).toContain("Valid until 23 Sept 2026.");

@@ -25,16 +25,19 @@ export function shareMessage(input: {
     return [
       `${hi} ${who},`,
       "",
-      `${input.business.name} has sent quote ${input.number}.`,
-      input.title,
-      `${input.totalLabel}`,
-      `Valid until ${input.dueOrValid}.`,
+      "View quote:",
+      input.url,
       "",
       "Accept:",
       quoteActionUrl(input.url, "accept"),
       "",
       "Decline:",
       quoteActionUrl(input.url, "decline"),
+      "",
+      `${input.business.name} has sent quote ${input.number}.`,
+      input.title,
+      `${input.totalLabel}`,
+      `Valid until ${input.dueOrValid}.`,
     ].join("\n");
   }
   if (input.kind === "reminder") {

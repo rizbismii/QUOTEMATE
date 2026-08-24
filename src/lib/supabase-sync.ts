@@ -49,14 +49,37 @@ export async function pushWorkspace(snapshot: Snapshot, id?: string): Promise<vo
   const client = getSupabase();
   if (!client) return;
   const workspaceId = id || workspaceIdForEmail(snapshot.session?.email || snapshot.business.email);
-  const { error } = await client.from("workspaces").upsert({
+  const row = { id: workspaceId, payload: snapshot, updated_at: new Date().toISOString() };
+  const { error } = await client.from("workspaces").upsert(row);
+  if (!error) return;
+  const slim = slimSnapshot(snapshot);
+  const retry = await client.from("workspaces").upsert({
     id: workspaceId,
-    payload: snapshot,
+    payload: slim,
     updated_at: new Date().toISOString(),
   });
-  if (error) {
-    console.warn("QuoteSnap cloud sync skipped:", error.message);
+  if (retry.error) {
+    console.warn("QuoteSnap cloud sync skipped:", retry.error.message || error.message);
   }
+}
+
+function slimSnapshot(snapshot: Snapshot): Snapshot {
+  return {
+    ...snapshot,
+    quotes: (snapshot.quotes ?? []).map((quote) => ({
+      ...quote,
+      photos: (quote.photos ?? []).map((photo) =>
+        photo.dataUrl && photo.dataUrl.length > 40_000 ? { ...photo, dataUrl: "" } : photo,
+      ),
+    })),
+    business: {
+      ...snapshot.business,
+      logoDataUrl:
+        snapshot.business.logoDataUrl && snapshot.business.logoDataUrl.length > 80_000
+          ? ""
+          : snapshot.business.logoDataUrl,
+    },
+  };
 }
 
 export async function findWorkspaceByEmail(
@@ -67,7 +90,9 @@ export async function findWorkspaceByEmail(
   if (cloudDisabled() || !client || !email.trim()) return null;
   const directId = workspaceIdForEmail(email);
   const direct = await pullWorkspace(directId);
-  if (direct && snapshotMatchesEmail(direct, email)) return { id: directId, snapshot: direct };
+  if (direct && (!snapshotEmails(direct).length || snapshotMatchesEmail(direct, email))) {
+    return { id: directId, snapshot: direct };
+  }
 
   const { data, error } = await client.from("workspaces").select("id, payload");
   if (error || !data?.length) return null;
@@ -162,6 +187,25 @@ export async function patchPublicQuote(
     return next[index];
   }
   return undefined;
+}
+
+export function subscribeWorkspace(id: string, onChange: () => void): () => void {
+  if (cloudDisabled()) return () => {};
+  const client = getSupabase();
+  if (!client || !id) return () => {};
+  const channel = client
+    .channel(`quotesnap:${id}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "workspaces", filter: `id=eq.${id}` },
+      () => {
+        onChange();
+      },
+    )
+    .subscribe();
+  return () => {
+    void client.removeChannel(channel);
+  };
 }
 
 export function snapshotFromState(state: AppState): Snapshot {

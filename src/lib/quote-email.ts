@@ -24,25 +24,33 @@ export function quoteEmailHtml(input: {
   business: Business;
   customer: Customer;
   viewUrl: string;
+  inlineImages?: boolean;
 }): string {
   const { quote, business, customer, viewUrl } = input;
+  const inlineImages = input.inlineImages !== false;
   const money = totals(quote.lineItems, business.country, business.gstRegistered);
   const acceptUrl = quoteActionUrl(viewUrl, "accept");
   const declineUrl = quoteActionUrl(viewUrl, "decline");
   const city = (business.city || (business.country === "NZ" ? "New Zealand" : "Australia")).toUpperCase();
   const valid = formatDate(quote.validUntil, business.country);
-  const logo = business.logoDataUrl
-    ? `<img src="${business.logoDataUrl}" alt="${esc(business.name)}" width="160" style="max-height:56px;max-width:160px;display:block;">`
-    : `<div style="font-size:22px;font-weight:700;letter-spacing:-0.03em;">${esc(business.name)}</div>
+  const logo =
+    inlineImages && business.logoDataUrl
+      ? `<img src="${business.logoDataUrl}" alt="${esc(business.name)}" width="160" style="max-height:56px;max-width:160px;display:block;">`
+      : `<div style="font-size:22px;font-weight:700;letter-spacing:-0.03em;">${esc(business.name)}</div>
        <div style="font-size:11px;letter-spacing:0.16em;color:#6b645c;margin-top:4px;">${esc(city)}</div>`;
 
-  const photos = quote.photos
-    .slice(0, 3)
-    .map(
-      (photo) =>
-        `<img src="${photo.dataUrl}" alt="${esc(photo.name)}" width="170" style="width:170px;height:128px;object-fit:cover;border-radius:8px;display:inline-block;margin:0 6px 6px 0;">`,
-    )
-    .join("");
+  const photos =
+    inlineImages && quote.photos.length
+      ? quote.photos
+          .slice(0, 3)
+          .map(
+            (photo) =>
+              `<img src="${photo.dataUrl}" alt="${esc(photo.name)}" width="170" style="width:170px;height:128px;object-fit:cover;border-radius:8px;display:inline-block;margin:0 6px 6px 0;">`,
+          )
+          .join("")
+      : quote.photos.length
+        ? `<p style="font-size:13px;color:#6b645c;">Site photos are on the quote page.</p>`
+        : "";
 
   const items = quote.lineItems
     .map(
@@ -165,6 +173,36 @@ export function quoteEmailHtml(input: {
   </table>
 </body>
 </html>`;
+}
+
+export function quoteMailtoText(input: {
+  quote: Quote;
+  business: Business;
+  customer: Customer;
+  viewUrl: string;
+  totalLabel: string;
+}): string {
+  const { quote, business, customer, viewUrl, totalLabel } = input;
+  const who = customer.name.split(" ")[0] || "there";
+  return [
+    `${greeting(business.country)} ${who},`,
+    "",
+    "View quote:",
+    viewUrl,
+    "",
+    "Accept:",
+    quoteActionUrl(viewUrl, "accept"),
+    "",
+    "Decline:",
+    quoteActionUrl(viewUrl, "decline"),
+    "",
+    `${business.name} has sent quote ${quote.number}.`,
+    quote.title,
+    totalLabel,
+    `Valid until ${formatDate(quote.validUntil, business.country)}.`,
+    "",
+    "If this email looks plain, tap the message and paste — the formatted quote with Accept and Decline is already copied.",
+  ].join("\n");
 }
 
 export function quoteEmailText(input: {
