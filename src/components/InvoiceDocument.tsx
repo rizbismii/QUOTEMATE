@@ -1,5 +1,5 @@
 import { formatDate } from "@/lib/format";
-import { formatMoney, gstLabel, lineAmount, taxNumberLabel, totals } from "@/lib/money";
+import { formatMoney, gstLabel, lineAmount, registrationNumberLabel, taxNumberLabel, totals } from "@/lib/money";
 import { invoiceIsOverdue } from "@/lib/money";
 import { publicPayPath } from "@/lib/paths";
 import { payMethodLabel } from "@/lib/pay";
@@ -40,6 +40,11 @@ export function InvoiceDocument({
           <p className="mt-1 font-semibold">{business.name}</p>
           <p>{business.ownerName}</p>
           <p className="text-ink-soft">{business.address}</p>
+          {business.registrationNumber ? (
+            <p className="text-ink-soft">
+              {registrationNumberLabel(business.country)} {business.registrationNumber}
+            </p>
+          ) : null}
           {business.gstRegistered && business.taxNumber ? (
             <p className="mt-1">
               {taxNumberLabel(business.country)} {business.taxNumber}

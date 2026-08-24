@@ -54,6 +54,30 @@ export function taxNumberLabel(country: Country): string {
   return country === "NZ" ? "GST number" : "ABN";
 }
 
+export function taxNumberHint(country: Country): string {
+  return country === "NZ"
+    ? "IRD GST number printed on quotes and invoices."
+    : "11-digit ABN — this is the GST number used on quotes.";
+}
+
+export function taxNumberPlaceholder(country: Country): string {
+  return country === "NZ" ? "123-456-789" : "12 345 678 901";
+}
+
+export function registrationNumberLabel(country: Country): string {
+  return country === "NZ" ? "NZBN / company number" : "ACN";
+}
+
+export function registrationNumberHint(country: Country): string {
+  return country === "NZ"
+    ? "Optional. New Zealand Business Number or Companies Office number."
+    : "Optional. Australian Company Number.";
+}
+
+export function registrationNumberPlaceholder(country: Country): string {
+  return country === "NZ" ? "9429041234567" : "123 456 789";
+}
+
 export function addDays(isoDate: string, days: number): string {
   const date = new Date(`${isoDate}T12:00:00`);
   date.setDate(date.getDate() + days);

@@ -4,7 +4,14 @@ import { Button } from "@/components/Button";
 import { CloudStatusCard } from "@/components/CloudStatusCard";
 import { Field, Input, Select, Textarea } from "@/components/Field";
 import { TRADE_LABELS } from "@/lib/ai";
-import { taxNumberLabel } from "@/lib/money";
+import {
+  registrationNumberHint,
+  registrationNumberLabel,
+  registrationNumberPlaceholder,
+  taxNumberHint,
+  taxNumberLabel,
+  taxNumberPlaceholder,
+} from "@/lib/money";
 import { fileToLogo } from "@/lib/photos";
 import { useStore } from "@/lib/store";
 import type { Country, Trade } from "@/lib/types";
@@ -77,8 +84,15 @@ export default function SettingsPage() {
           <Input value={business.phone} onChange={(e) => updateBusiness({ phone: e.target.value })} />
         </Field>
       </div>
-      <Field label="Address">
+      <Field label="Business address">
         <Textarea value={business.address} onChange={(e) => updateBusiness({ address: e.target.value })} />
+      </Field>
+      <Field label={registrationNumberLabel(business.country)} hint={registrationNumberHint(business.country)}>
+        <Input
+          value={business.registrationNumber ?? ""}
+          onChange={(e) => updateBusiness({ registrationNumber: e.target.value })}
+          placeholder={registrationNumberPlaceholder(business.country)}
+        />
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Country">
@@ -111,11 +125,11 @@ export default function SettingsPage() {
         />
         GST registered — add {business.country === "NZ" ? "15%" : "10%"} on quotes and invoices
       </label>
-      <Field label={taxNumberLabel(business.country)}>
+      <Field label={taxNumberLabel(business.country)} hint={taxNumberHint(business.country)}>
         <Input
           value={business.taxNumber}
           onChange={(e) => updateBusiness({ taxNumber: e.target.value })}
-          placeholder={business.country === "NZ" ? "123-456-789" : "12 345 678 901"}
+          placeholder={taxNumberPlaceholder(business.country)}
         />
       </Field>
       <Field label="Bank name">

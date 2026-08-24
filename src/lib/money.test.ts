@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { financialYear, formatMoney, gstRate, roundMoney, totals } from "./money";
+import {
+  financialYear,
+  formatMoney,
+  gstRate,
+  registrationNumberLabel,
+  roundMoney,
+  taxNumberLabel,
+  totals,
+} from "./money";
 import type { LineItem } from "./types";
 
 const items = (rows: Array<Pick<LineItem, "quantity" | "unitPrice">>) => rows;
@@ -46,6 +54,13 @@ describe("GST", () => {
     expect(money.subtotal).toBe(802);
     expect(money.gst).toBe(120.3);
     expect(money.total).toBe(922.3);
+  });
+
+  it("labels GST and registration numbers by country", () => {
+    expect(taxNumberLabel("NZ")).toBe("GST number");
+    expect(taxNumberLabel("AU")).toBe("ABN");
+    expect(registrationNumberLabel("NZ")).toBe("NZBN / company number");
+    expect(registrationNumberLabel("AU")).toBe("ACN");
   });
 
   it("uses April–March FY for NZ and July–June for AU", () => {

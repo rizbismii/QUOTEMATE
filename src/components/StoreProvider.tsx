@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { normalizeBusiness } from "@/lib/demo";
+import { emailsMatch } from "@/lib/auth";
+import { DEMO_LOGIN, normalizeBusiness } from "@/lib/demo";
 import { pingCloud, pullWorkspace, pushWorkspace, snapshotFromState } from "@/lib/supabase-sync";
 import { getSupabase } from "@/lib/supabase";
 import { useStore } from "@/lib/store";
@@ -45,18 +46,32 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const remote = await pullWorkspace();
       if (cancelled) return;
       if (remote?.session) {
-        useStore.setState({
-          ...remote,
-          business: normalizeBusiness(remote.business),
-          customers: remote.customers ?? [],
-          quotes: remote.quotes ?? [],
-          invoices: remote.invoices ?? [],
-          activities: remote.activities ?? [],
-          hydrated: true,
-        });
+        const local = useStore.getState();
+        const sameAccount =
+          Boolean(local.session) &&
+          emailsMatch(local.session?.email ?? "", remote.session.email);
+        const keepLocalAccount = Boolean(local.session && !sameAccount);
+        if (!keepLocalAccount) {
+          useStore.setState({
+            ...remote,
+            signedIn: sameAccount ? local.signedIn : Boolean(remote.session),
+            session: {
+              email: remote.session.email,
+              name: remote.session.name,
+              passwordHash: sameAccount ? local.session?.passwordHash : remote.session.passwordHash,
+            },
+            business: normalizeBusiness(remote.business),
+            customers: remote.customers ?? [],
+            quotes: remote.quotes ?? [],
+            invoices: remote.invoices ?? [],
+            activities: remote.activities ?? [],
+            hydrated: true,
+          });
+        }
       }
       unsubStore = useStore.subscribe((state) => {
-        if (!state.session) return;
+        if (!state.signedIn || !state.session) return;
+        if (!emailsMatch(state.session.email, DEMO_LOGIN.email)) return;
         if (pushTimer) clearTimeout(pushTimer);
         pushTimer = setTimeout(() => {
           void pushWorkspace(snapshotFromState(state));
