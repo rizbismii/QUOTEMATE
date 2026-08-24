@@ -1,6 +1,7 @@
 import { findSavedAccount, rememberAccount } from "./account-vault";
 import { emailsMatch, hashPassword, mobileMatches, passwordIsValid, verifyPassword } from "./auth";
 import { emptyBusiness, normalizeBusiness } from "./demo";
+import { mergeSnapshots } from "./merge-snapshots";
 import {
   findWorkspaceByEmail,
   pushWorkspace,
@@ -18,7 +19,11 @@ export async function signInFromCloud(
   if (!found?.snapshot.session) return { ok: false, reason: "missing" };
   const hash = found.snapshot.session.passwordHash;
   if (!hash || !verifyPassword(password, hash)) return { ok: false, reason: "password" };
-  useStore.getState().applySnapshot({ ...found.snapshot, signedIn: true }, true);
+  const local = snapshotFromState(useStore.getState());
+  const localEmail = local.session?.email || local.business.email;
+  const belongsHere = Boolean(localEmail && emailsMatch(localEmail, email));
+  const snapshot = belongsHere ? mergeSnapshots(local, found.snapshot).snapshot : found.snapshot;
+  useStore.getState().applySnapshot({ ...snapshot, signedIn: true }, true);
   return { ok: true };
 }
 
