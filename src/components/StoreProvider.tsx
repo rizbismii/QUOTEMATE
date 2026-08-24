@@ -2,10 +2,33 @@
 
 import { useEffect, useRef, useState } from "react";
 import { rememberAccount } from "@/lib/account-vault";
-import { normalizeBusiness } from "@/lib/demo";
-import { pingCloud, pushWorkspace, snapshotFromState, workspaceIdForEmail } from "@/lib/supabase-sync";
+import { emailsMatch } from "@/lib/auth";
+import { DEMO_LOGIN, normalizeBusiness } from "@/lib/demo";
+import { mergeSnapshots } from "@/lib/merge-snapshots";
 import { getSupabase } from "@/lib/supabase";
+import {
+  findWorkspaceByEmail,
+  pingCloud,
+  pushWorkspace,
+  snapshotFromState,
+  workspaceIdForEmail,
+} from "@/lib/supabase-sync";
 import { useStore } from "@/lib/store";
+
+function waitForHydrated(): Promise<void> {
+  return new Promise((resolve) => {
+    const unsub = useStore.subscribe((state) => {
+      if (state.hydrated) {
+        unsub();
+        resolve();
+      }
+    });
+    if (useStore.getState().hydrated) {
+      unsub();
+      resolve();
+    }
+  });
+}
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
@@ -16,6 +39,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     let pushTimer: ReturnType<typeof setTimeout> | undefined;
     let unsubStore: (() => void) | undefined;
     let unsubHydrate: (() => void) | undefined;
+    let syncing = false;
 
     const finish = () => {
       if (finished.current || cancelled) return;
@@ -39,35 +63,103 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
     const timeout = window.setTimeout(finish, 2500);
 
-    async function syncCloud() {
+    async function pullAndMerge(): Promise<boolean> {
+      const current = useStore.getState();
+      if (!current.hydrated || !current.signedIn || !current.session) return false;
+      if (emailsMatch(current.session.email, DEMO_LOGIN.email)) return true;
+
+      const email = current.session.email;
+      const found = await findWorkspaceByEmail(email);
+      if (cancelled) return false;
+      if (!found) return true;
+
+      const { snapshot, changed } = mergeSnapshots(snapshotFromState(useStore.getState()), found.snapshot);
+      if (changed) useStore.getState().applySnapshot(snapshot, true);
+      return true;
+    }
+
+    async function pushCurrent() {
+      const state = useStore.getState();
+      if (!state.hydrated || !state.signedIn || !state.session) return;
+      rememberAccount({
+        email: state.session.email,
+        name: state.session.name,
+        phone: state.business.phone,
+        passwordHash: state.session.passwordHash || "",
+      });
+      await pushWorkspace(snapshotFromState(state), workspaceIdForEmail(state.session.email));
+    }
+
+    async function syncFromCloud() {
+      if (syncing || cancelled || !getSupabase()) return;
+      syncing = true;
+      try {
+        const shouldPush = await pullAndMerge();
+        if (shouldPush && !cancelled) await pushCurrent();
+      } finally {
+        syncing = false;
+      }
+    }
+
+    async function startCloud() {
       if (!getSupabase()) return;
       const status = await pingCloud();
       if (cancelled || status !== "ok") return;
-      unsubStore = useStore.subscribe((state) => {
-        if (!state.signedIn || !state.session) return;
+
+      await waitForHydrated();
+      if (cancelled) return;
+
+      await syncFromCloud();
+      if (cancelled) return;
+
+      unsubStore = useStore.subscribe((state, prev) => {
+        if (!state.hydrated || !state.session) return;
+
+        const isDemo = emailsMatch(state.session.email, DEMO_LOGIN.email);
+        const signedInNow = state.signedIn && !prev.signedIn;
+        const switchedUser =
+          state.signedIn &&
+          Boolean(prev.session?.email) &&
+          !emailsMatch(prev.session!.email, state.session.email);
+        if (state.signedIn && (signedInNow || switchedUser) && !isDemo) {
+          void syncFromCloud();
+          return;
+        }
+        if (!state.signedIn) return;
+
         const id = workspaceIdForEmail(state.session.email);
         if (pushTimer) clearTimeout(pushTimer);
         pushTimer = setTimeout(() => {
           void pushWorkspace(snapshotFromState(state), id);
         }, 600);
       });
-      const current = useStore.getState();
-      if (current.signedIn && current.session) {
-        rememberAccount({
-          email: current.session.email,
-          name: current.session.name,
-          phone: current.business.phone,
-          passwordHash: current.session.passwordHash || "",
-        });
-        void pushWorkspace(snapshotFromState(current), workspaceIdForEmail(current.session.email));
-      }
     }
 
-    void syncCloud();
+    void startCloud();
+
+    const onFocus = () => {
+      void syncFromCloud();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void syncFromCloud();
+    };
+    const onOnline = () => {
+      void syncFromCloud();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("online", onOnline);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void syncFromCloud();
+    }, 45_000);
 
     return () => {
       cancelled = true;
       window.clearTimeout(timeout);
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("online", onOnline);
       unsubHydrate?.();
       unsubStore?.();
       if (pushTimer) clearTimeout(pushTimer);

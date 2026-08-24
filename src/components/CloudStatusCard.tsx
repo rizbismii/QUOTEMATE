@@ -22,6 +22,12 @@ export function CloudStatusCard() {
     <div className="rounded-2xl border border-line bg-card p-4 text-sm">
       <p className="text-xs font-semibold uppercase tracking-wider text-steel">Supabase</p>
       <p className="mt-1 font-semibold">{labels[status]}</p>
+      {status === "ok" ? (
+        <p className="mt-1 text-xs text-steel">
+          Phone, computer and other browsers share one job book. Open Home on both after sending or
+          declining a quote.
+        </p>
+      ) : null}
       {status === "missing-table" ? (
         <a
           className="mt-2 inline-block text-xs font-semibold text-rust"

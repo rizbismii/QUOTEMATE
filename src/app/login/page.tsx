@@ -56,8 +56,8 @@ export default function LoginPage() {
       <Wordmark />
       <h1 className="mt-8 font-display text-4xl tracking-tight">Log in</h1>
       <p className="mt-2 text-sm text-ink-soft">
-        Use the email and password from register. If you saved the account online, you can log in from
-        this browser too.
+        Use the email and password from register. Quotes sync to the cloud, so phone and computer stay
+        in step.
       </p>
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <Field label="Email">
