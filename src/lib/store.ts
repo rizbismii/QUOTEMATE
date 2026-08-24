@@ -58,6 +58,7 @@ interface Actions {
     mobile: string;
     password: string;
   }) => { ok: true } | { ok: false; reason: "email" | "mobile" | "password" };
+  applySnapshot: (snapshot: Omit<AppState, "hydrated">, signedIn: boolean) => void;
   loadDemo: () => void;
   logout: () => void;
   updateBusiness: (patch: Partial<Business>) => void;
@@ -155,7 +156,8 @@ export const useStore = create<AppState & Actions>()(
 
       resetPassword: (input) => {
         const state = get();
-        if (!state.session || !emailsMatch(state.session.email, input.email)) {
+        const localEmail = state.session?.email || state.business.email;
+        if (!localEmail || !emailsMatch(localEmail, input.email)) {
           return { ok: false, reason: "email" };
         }
         if (!mobileMatches(state.business.phone, input.mobile)) {
@@ -164,12 +166,26 @@ export const useStore = create<AppState & Actions>()(
         if (!passwordIsValid(input.password)) return { ok: false, reason: "password" };
         set({
           session: {
-            ...state.session,
+            email: state.session?.email || state.business.email,
+            name: state.session?.name || state.business.ownerName,
             passwordHash: hashPassword(input.password),
           },
         });
         return { ok: true };
       },
+
+      applySnapshot: (snapshot, signedIn) =>
+        set({
+          signedIn,
+          session: snapshot.session ?? null,
+          business: normalizeBusiness(snapshot.business),
+          customers: snapshot.customers ?? [],
+          quotes: snapshot.quotes ?? [],
+          invoices: snapshot.invoices ?? [],
+          activities: snapshot.activities ?? [],
+          quoteSeq: snapshot.quoteSeq ?? 0,
+          invoiceSeq: snapshot.invoiceSeq ?? 0,
+        }),
 
       loadDemo: () => set(demoState()),
 

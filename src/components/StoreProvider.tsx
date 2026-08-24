@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { emailsMatch } from "@/lib/auth";
-import { DEMO_LOGIN, normalizeBusiness } from "@/lib/demo";
-import { pingCloud, pullWorkspace, pushWorkspace, snapshotFromState } from "@/lib/supabase-sync";
+import { normalizeBusiness } from "@/lib/demo";
+import { pingCloud, pushWorkspace, snapshotFromState, workspaceIdForEmail } from "@/lib/supabase-sync";
 import { getSupabase } from "@/lib/supabase";
 import { useStore } from "@/lib/store";
 
@@ -43,40 +42,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!getSupabase()) return;
       const status = await pingCloud();
       if (cancelled || status !== "ok") return;
-      const remote = await pullWorkspace();
-      if (cancelled) return;
-      if (remote?.session) {
-        const local = useStore.getState();
-        const sameAccount =
-          Boolean(local.session) &&
-          emailsMatch(local.session?.email ?? "", remote.session.email);
-        const keepLocalAccount = Boolean(local.session && !sameAccount);
-        if (!keepLocalAccount) {
-          useStore.setState({
-            ...remote,
-            signedIn: sameAccount ? local.signedIn : Boolean(remote.session),
-            session: {
-              email: remote.session.email,
-              name: remote.session.name,
-              passwordHash: sameAccount ? local.session?.passwordHash : remote.session.passwordHash,
-            },
-            business: normalizeBusiness(remote.business),
-            customers: remote.customers ?? [],
-            quotes: remote.quotes ?? [],
-            invoices: remote.invoices ?? [],
-            activities: remote.activities ?? [],
-            hydrated: true,
-          });
-        }
-      }
       unsubStore = useStore.subscribe((state) => {
         if (!state.signedIn || !state.session) return;
-        if (!emailsMatch(state.session.email, DEMO_LOGIN.email)) return;
+        const id = workspaceIdForEmail(state.session.email);
         if (pushTimer) clearTimeout(pushTimer);
         pushTimer = setTimeout(() => {
-          void pushWorkspace(snapshotFromState(state));
+          void pushWorkspace(snapshotFromState(state), id);
         }, 600);
       });
+      const current = useStore.getState();
+      if (current.signedIn && current.session) {
+        void pushWorkspace(snapshotFromState(current), workspaceIdForEmail(current.session.email));
+      }
     }
 
     void syncCloud();

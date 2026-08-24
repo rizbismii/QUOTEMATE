@@ -7,7 +7,7 @@ import {
   publicSession,
   verifyPassword,
 } from "./auth";
-import { snapshotFromState } from "./supabase-sync";
+import { snapshotFromState, workspaceIdForEmail } from "./supabase-sync";
 import { emptyBusiness } from "./demo";
 
 describe("auth", () => {
@@ -36,7 +36,7 @@ describe("auth", () => {
     expect(mobileMatches("", "0148")).toBe(false);
   });
 
-  it("strips the password hash from a cloud snapshot", () => {
+  it("keeps the password hash on a cloud snapshot so reset can work", () => {
     const snapshot = snapshotFromState({
       hydrated: true,
       signedIn: true,
@@ -49,10 +49,19 @@ describe("auth", () => {
       quoteSeq: 0,
       invoiceSeq: 0,
     });
-    expect(snapshot.session).toEqual({ email: "sam@halefencing.co.nz", name: "Sam" });
+    expect(snapshot.session).toEqual({
+      email: "sam@halefencing.co.nz",
+      name: "Sam",
+      passwordHash: "fnv1a:deadbeef",
+    });
     expect(publicSession({ email: "a@b.com", name: "A", passwordHash: "x" })).toEqual({
       email: "a@b.com",
       name: "A",
     });
+  });
+
+  it("uses a per-email cloud workspace id", () => {
+    expect(workspaceIdForEmail("sam@halefencing.co.nz")).toBe("quotesnap-demo");
+    expect(workspaceIdForEmail("Muhammadurizwan@gmail.com")).toBe("qs-muhammadurizwan-gmail-com");
   });
 });

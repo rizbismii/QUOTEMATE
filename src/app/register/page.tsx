@@ -14,6 +14,7 @@ import {
   taxNumberPlaceholder,
 } from "@/lib/money";
 import { useStore } from "@/lib/store";
+import { snapshotFromState, pushWorkspace, workspaceIdForEmail } from "@/lib/supabase-sync";
 import type { Country, Trade } from "@/lib/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -57,6 +58,10 @@ export default function RegisterPage() {
     if (!result.ok) {
       setError("Choose a password with at least 6 characters.");
       return;
+    }
+    const state = useStore.getState();
+    if (state.session?.email) {
+      void pushWorkspace(snapshotFromState(state), workspaceIdForEmail(state.session.email));
     }
     router.push("/app");
   }
