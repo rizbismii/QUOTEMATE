@@ -21,18 +21,53 @@ export function shareMessage(input: {
   const methods = input.payMethodsLabel || "Visa, Mastercard or bank transfer";
   const pay = input.payUrl || input.url;
   if (input.kind === "quote") {
-    return `${hi} ${who}, ${input.business.name} has sent quote ${input.number} for ${input.title} — ${input.totalLabel}. Valid until ${input.dueOrValid}. View and accept here: ${input.url}`;
+    return [
+      `${hi} ${who},`,
+      "",
+      `${input.business.name} has sent quote ${input.number}.`,
+      input.title,
+      input.totalLabel,
+      `Valid until ${input.dueOrValid}.`,
+      "",
+      "Accept quote:",
+      input.url,
+    ].join("\n");
   }
   if (input.kind === "reminder") {
-    return `${hi} ${who}, friendly reminder that invoice ${input.number} (${input.totalLabel}) was due ${input.dueOrValid}. Pay now (${methods}): ${pay} — ${input.business.name}`;
+    return [
+      `${hi} ${who},`,
+      "",
+      `Friendly reminder that invoice ${input.number} (${input.totalLabel}) was due ${input.dueOrValid}.`,
+      "",
+      `Pay now (${methods}):`,
+      pay,
+      "",
+      input.business.name,
+    ].join("\n");
   }
-  return `${hi} ${who}, invoice ${input.number} from ${input.business.name} for ${input.title} is ${input.totalLabel}, due ${input.dueOrValid}. Pay now (${methods}): ${pay}`;
+  return [
+    `${hi} ${who},`,
+    "",
+    `Invoice ${input.number} from ${input.business.name} for ${input.title} is ${input.totalLabel}, due ${input.dueOrValid}.`,
+    "",
+    `Pay now (${methods}):`,
+    pay,
+  ].join("\n");
 }
 
 export function mailSubject(kind: "quote" | "invoice" | "reminder", number: string, businessName: string): string {
   if (kind === "quote") return `Quote ${number} from ${businessName}`;
   if (kind === "reminder") return `Reminder: invoice ${number} from ${businessName}`;
   return `Invoice ${number} from ${businessName}`;
+}
+
+export function mailtoHref(to: string, subject: string, body: string, cc?: string): string {
+  const query = [
+    `subject=${encodeURIComponent(subject)}`,
+    `body=${encodeURIComponent(body)}`,
+  ];
+  if (cc) query.push(`cc=${encodeURIComponent(cc)}`);
+  return `mailto:${encodeURIComponent(to)}?${query.join("&")}`;
 }
 
 export function buildShareUrl(input: {
@@ -43,13 +78,9 @@ export function buildShareUrl(input: {
   subject: string;
   body: string;
 }): string | null {
-  const cc = [input.business.email, ...input.business.ccEmails.filter(Boolean)].join(",");
+  const cc = [input.business.email, ...input.business.ccEmails.filter(Boolean)].filter(Boolean).join(",");
   if (input.channel === "email") {
-    const params = new URLSearchParams();
-    params.set("subject", input.subject);
-    params.set("body", input.body);
-    if (cc) params.set("cc", cc);
-    return `mailto:${encodeURIComponent(input.customer.email)}?${params.toString()}`;
+    return mailtoHref(input.customer.email, input.subject, input.body, cc || undefined);
   }
   if (input.channel === "sms") {
     const body = encodeURIComponent(input.body);
