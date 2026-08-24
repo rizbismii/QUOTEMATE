@@ -4,8 +4,9 @@ import { formatMoney, totals } from "@/lib/money";
 import { formatDate } from "@/lib/format";
 import { publicInvoicePath, publicPayPath, publicQuotePath } from "@/lib/paths";
 import { payMethodLabel } from "@/lib/pay";
-import { quoteEmailHtml, quoteEmailText } from "@/lib/quote-email";
-import { buildShareUrl, mailSubject, openMailto, publicUrl, shareMessage } from "@/lib/share";
+import { quoteEmailHtml, quoteMailtoText } from "@/lib/quote-email";
+import { quoteEmailFileName, openQuoteEmail } from "@/lib/send-email";
+import { buildShareUrl, mailSubject, publicUrl, shareMessage } from "@/lib/share";
 import { useStore } from "@/lib/store";
 import type { Invoice, Quote, SendChannel } from "@/lib/types";
 import { Copy, Mail, MessageCircle, MessageSquare, Link as LinkIcon } from "lucide-react";
@@ -26,6 +27,7 @@ export function SendSheet({
   const sendQuote = useStore((s) => s.sendQuote);
   const sendReminder = useStore((s) => s.sendReminder);
   const [copied, setCopied] = useState(false);
+  const [emailHint, setEmailHint] = useState("");
 
   const record = quote ?? invoice;
   if (!record) return null;
@@ -39,8 +41,20 @@ export function SendSheet({
   const dueOrValid = quote
     ? formatDate(quote.validUntil, business.country)
     : formatDate(invoice!.dueAt, business.country);
+  const previewHtml = quote
+    ? quoteEmailHtml({ quote, business, customer, viewUrl: url })
+    : undefined;
+  const sendHtml = quote
+    ? quoteEmailHtml({ quote, business, customer, viewUrl: url, inlineImages: false })
+    : undefined;
   const body = quote
-    ? quoteEmailText({ quote, business, customer, viewUrl: url })
+    ? quoteMailtoText({
+        quote,
+        business,
+        customer,
+        viewUrl: url,
+        totalLabel: formatMoney(money.total, business.country, true),
+      })
     : shareMessage({
         kind,
         number: record.number,
@@ -69,8 +83,26 @@ export function SendSheet({
     setTimeout(() => setCopied(false), 2000);
   }
 
-  function open(channel: SendChannel) {
+  async function open(channel: SendChannel) {
     if (!customer) return;
+    if (channel === "email" && quote && sendHtml) {
+      mark(channel);
+      const how = await openQuoteEmail({
+        from: business.email,
+        to: customer.email,
+        cc: cc || undefined,
+        subject,
+        html: sendHtml,
+        text: body,
+        fileName: quoteEmailFileName(quote.number),
+      });
+      setEmailHint(
+        how === "shared"
+          ? "Choose Mail or Gmail in the share list. The quote is HTML with Accept and Decline."
+          : "Formatted quote copied. If Gmail looks plain, tap the message and paste.",
+      );
+      return;
+    }
     const href = buildShareUrl({
       channel,
       country: business.country,
@@ -81,42 +113,42 @@ export function SendSheet({
     });
     mark(channel);
     if (!href) return;
-    if (channel === "email") openMailto(href);
-    else window.open(href, "_blank");
+    window.open(href, "_blank");
   }
 
   return (
     <div className="rounded-2xl border border-line bg-card p-4">
       <p className="font-display text-lg">Send to customer</p>
       <p className="mt-1 text-xs text-steel">
-        Email opens Gmail or Mail on this phone with the quote, Accept, and Decline. Creator copy
-        goes to {cc || "your business email"}.
+        Email sends the formatted quote with Accept and Decline. Creator copy goes to{" "}
+        {cc || "your business email"}.
       </p>
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <Button type="button" variant="secondary" onClick={() => open("email")}>
+        <Button type="button" variant="secondary" onClick={() => void open("email")}>
           <Mail className="h-4 w-4" /> Email
         </Button>
-        <Button type="button" variant="secondary" onClick={() => open("sms")}>
+        <Button type="button" variant="secondary" onClick={() => void open("sms")}>
           <MessageSquare className="h-4 w-4" /> SMS
         </Button>
-        <Button type="button" variant="secondary" onClick={() => open("whatsapp")}>
+        <Button type="button" variant="secondary" onClick={() => void open("whatsapp")}>
           <MessageCircle className="h-4 w-4" /> WhatsApp
         </Button>
-        <Button type="button" variant="secondary" onClick={copyLink}>
+        <Button type="button" variant="secondary" onClick={() => void copyLink()}>
           {copied ? <LinkIcon className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           {copied ? "Copied" : "Copy message"}
         </Button>
       </div>
+      {emailHint ? <p className="mt-3 text-xs font-semibold text-rust">{emailHint}</p> : null}
       {invoice && payUrl ? (
         <p className="mt-3 break-all text-xs text-steel">
           Pay button: <span className="font-semibold text-ink">{payUrl}</span>
         </p>
       ) : null}
-      {quote ? (
+      {previewHtml ? (
         <iframe
           title="Quote email preview"
           className="mt-3 h-[420px] w-full rounded-xl border border-line bg-paper"
-          srcDoc={quoteEmailHtml({ quote, business, customer, viewUrl: url })}
+          srcDoc={previewHtml}
         />
       ) : (
         <pre className="mt-3 whitespace-pre-wrap rounded-xl bg-paper px-3 py-2 text-xs text-ink-soft">

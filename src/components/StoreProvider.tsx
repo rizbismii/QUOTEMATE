@@ -11,6 +11,7 @@ import {
   pingCloud,
   pushWorkspace,
   snapshotFromState,
+  subscribeWorkspace,
   workspaceIdForEmail,
 } from "@/lib/supabase-sync";
 import { useStore } from "@/lib/store";
@@ -39,7 +40,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     let pushTimer: ReturnType<typeof setTimeout> | undefined;
     let unsubStore: (() => void) | undefined;
     let unsubHydrate: (() => void) | undefined;
+    let unsubRealtime: (() => void) | undefined;
     let syncing = false;
+    let applyingRemote = false;
+    let pendingSync = false;
+    let wantPush = false;
 
     const finish = () => {
       if (finished.current || cancelled) return;
@@ -63,19 +68,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
     const timeout = window.setTimeout(finish, 2500);
 
-    async function pullAndMerge(): Promise<boolean> {
+    async function pullAndMerge(): Promise<{ ok: boolean; changed: boolean }> {
       const current = useStore.getState();
-      if (!current.hydrated || !current.signedIn || !current.session) return false;
-      if (emailsMatch(current.session.email, DEMO_LOGIN.email)) return true;
+      if (!current.hydrated || !current.signedIn || !current.session) return { ok: false, changed: false };
+      if (emailsMatch(current.session.email, DEMO_LOGIN.email)) return { ok: true, changed: false };
 
       const email = current.session.email;
       const found = await findWorkspaceByEmail(email);
-      if (cancelled) return false;
-      if (!found) return true;
+      if (cancelled) return { ok: false, changed: false };
+      if (!found) return { ok: true, changed: false };
 
       const { snapshot, changed } = mergeSnapshots(snapshotFromState(useStore.getState()), found.snapshot);
-      if (changed) useStore.getState().applySnapshot(snapshot, true);
-      return true;
+      if (changed) {
+        applyingRemote = true;
+        useStore.getState().applySnapshot(snapshot, true);
+        applyingRemote = false;
+      }
+      return { ok: true, changed };
     }
 
     async function pushCurrent() {
@@ -91,14 +100,43 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
 
     async function syncFromCloud() {
-      if (syncing || cancelled || !getSupabase()) return;
+      if (cancelled || !getSupabase()) return;
+      if (syncing) {
+        pendingSync = true;
+        return;
+      }
       syncing = true;
       try {
-        const shouldPush = await pullAndMerge();
-        if (shouldPush && !cancelled) await pushCurrent();
+        const pulled = await pullAndMerge();
+        if (!pulled.ok || cancelled) return;
+        if (pulled.changed || wantPush) {
+          wantPush = false;
+          await pushCurrent();
+        }
       } finally {
         syncing = false;
+        if (pendingSync && !cancelled) {
+          pendingSync = false;
+          void syncFromCloud();
+        }
       }
+    }
+
+    function listenRealtime(email?: string) {
+      unsubRealtime?.();
+      unsubRealtime = undefined;
+      if (!email || emailsMatch(email, DEMO_LOGIN.email)) return;
+      unsubRealtime = subscribeWorkspace(workspaceIdForEmail(email), () => {
+        void syncFromCloud();
+      });
+    }
+
+    function scheduleSync() {
+      wantPush = true;
+      if (pushTimer) clearTimeout(pushTimer);
+      pushTimer = setTimeout(() => {
+        void syncFromCloud();
+      }, 500);
     }
 
     async function startCloud() {
@@ -109,11 +147,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       await waitForHydrated();
       if (cancelled) return;
 
+      wantPush = true;
       await syncFromCloud();
       if (cancelled) return;
 
+      listenRealtime(useStore.getState().session?.email);
+
       unsubStore = useStore.subscribe((state, prev) => {
         if (!state.hydrated || !state.session) return;
+        if (applyingRemote) return;
 
         const isDemo = emailsMatch(state.session.email, DEMO_LOGIN.email);
         const signedInNow = state.signedIn && !prev.signedIn;
@@ -121,17 +163,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           state.signedIn &&
           Boolean(prev.session?.email) &&
           !emailsMatch(prev.session!.email, state.session.email);
-        if (state.signedIn && (signedInNow || switchedUser) && !isDemo) {
-          void syncFromCloud();
+        if (state.signedIn && (signedInNow || switchedUser)) {
+          listenRealtime(isDemo ? undefined : state.session.email);
+          if (!isDemo) {
+            wantPush = true;
+            void syncFromCloud();
+          }
           return;
         }
-        if (!state.signedIn) return;
-
-        const id = workspaceIdForEmail(state.session.email);
-        if (pushTimer) clearTimeout(pushTimer);
-        pushTimer = setTimeout(() => {
-          void pushWorkspace(snapshotFromState(state), id);
-        }, 600);
+        if (!state.signedIn) {
+          unsubRealtime?.();
+          unsubRealtime = undefined;
+          return;
+        }
+        scheduleSync();
       });
     }
 
@@ -146,12 +191,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const onOnline = () => {
       void syncFromCloud();
     };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== "quotesnap-v2") return;
+      void Promise.resolve(useStore.persist.rehydrate()).then(() => {
+        void syncFromCloud();
+      });
+    };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("online", onOnline);
+    window.addEventListener("storage", onStorage);
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") void syncFromCloud();
-    }, 45_000);
+    }, 8_000);
 
     return () => {
       cancelled = true;
@@ -160,8 +212,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("online", onOnline);
+      window.removeEventListener("storage", onStorage);
       unsubHydrate?.();
       unsubStore?.();
+      unsubRealtime?.();
       if (pushTimer) clearTimeout(pushTimer);
     };
   }, []);

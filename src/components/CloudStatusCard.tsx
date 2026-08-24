@@ -24,8 +24,7 @@ export function CloudStatusCard() {
       <p className="mt-1 font-semibold">{labels[status]}</p>
       {status === "ok" ? (
         <p className="mt-1 text-xs text-steel">
-          Phone, computer and other browsers share one job book. Open Home on both after sending or
-          declining a quote.
+          Phone, computer and other browsers share one job book. Changes sync while the app is open.
         </p>
       ) : null}
       {status === "missing-table" ? (
