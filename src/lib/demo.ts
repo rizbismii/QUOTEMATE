@@ -259,6 +259,7 @@ export function demoState(): AppState {
 
   return {
     hydrated: true,
+    signedIn: true,
     session: {
       email: "sam@halefencing.co.nz",
       name: "Sam Hale",

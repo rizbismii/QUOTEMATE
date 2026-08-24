@@ -135,6 +135,7 @@ export interface Activity {
 
 export interface AppState {
   hydrated: boolean;
+  signedIn: boolean;
   session: Session | null;
   business: Business;
   customers: Customer[];

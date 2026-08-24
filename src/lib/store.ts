@@ -21,6 +21,7 @@ import type {
 } from "./types";
 
 const blank = (): Omit<AppState, "hydrated"> => ({
+  signedIn: false,
   session: null,
   business: emptyBusiness(),
   customers: [],
@@ -88,29 +89,31 @@ export const useStore = create<AppState & Actions>()(
 
       setHydrated: (value) => set({ hydrated: value }),
 
-      login: (session) => set({ session }),
+      login: (session) => set({ session, signedIn: true }),
 
       signIn: (email, password) => {
         if (emailsMatch(email, DEMO_LOGIN.email) && password === DEMO_LOGIN.password) {
-          set(demoState());
+          set({ ...demoState(), signedIn: true });
           return { ok: true };
         }
         const session = get().session;
         if (!session) return { ok: false, reason: "missing" };
         if (!emailsMatch(session.email, email)) return { ok: false, reason: "email" };
         if (!session.passwordHash) {
-          set({ session: { ...session, passwordHash: hashPassword(password) } });
+          set({ session: { ...session, passwordHash: hashPassword(password) }, signedIn: true });
           return { ok: true };
         }
         if (!verifyPassword(password, session.passwordHash)) {
           return { ok: false, reason: "password" };
         }
+        set({ signedIn: true });
         return { ok: true };
       },
 
       register: (input) => {
         if (!passwordIsValid(input.password)) return { ok: false, reason: "password" };
         set({
+          signedIn: true,
           session: {
             email: input.email.trim(),
             name: input.ownerName.trim(),
@@ -170,7 +173,7 @@ export const useStore = create<AppState & Actions>()(
 
       loadDemo: () => set(demoState()),
 
-      logout: () => set({ session: null }),
+      logout: () => set({ signedIn: false }),
 
       updateBusiness: (patch) =>
         set((state) => ({ business: { ...state.business, ...patch } })),
@@ -455,6 +458,7 @@ export const useStore = create<AppState & Actions>()(
           ...currentState,
           ...persisted,
           hydrated: currentState.hydrated,
+          signedIn: persisted.signedIn ?? Boolean(persisted.session),
           business: normalizeBusiness(persisted.business),
         };
       },

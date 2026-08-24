@@ -62,6 +62,7 @@ export async function findPublicInvoice(token: string): Promise<{
 
 export function snapshotFromState(state: AppState): Snapshot {
   return {
+    signedIn: state.signedIn,
     session: publicSession(state.session),
     business: normalizeBusiness(state.business),
     customers: state.customers,

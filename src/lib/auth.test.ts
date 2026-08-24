@@ -39,6 +39,7 @@ describe("auth", () => {
   it("strips the password hash from a cloud snapshot", () => {
     const snapshot = snapshotFromState({
       hydrated: true,
+      signedIn: true,
       session: { email: "sam@halefencing.co.nz", name: "Sam", passwordHash: "fnv1a:deadbeef" },
       business: emptyBusiness(),
       customers: [],
