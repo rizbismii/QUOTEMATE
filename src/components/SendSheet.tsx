@@ -106,6 +106,9 @@ export function SendSheet({
           Pay button: <span className="font-semibold text-ink">{payUrl}</span>
         </p>
       ) : null}
+      <pre className="mt-3 whitespace-pre-wrap rounded-xl bg-paper px-3 py-2 text-xs text-ink-soft">
+        {kind === "quote" ? `Subject: ${subject}\n\n${body}` : body}
+      </pre>
     </div>
   );
 }
