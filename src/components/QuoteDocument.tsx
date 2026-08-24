@@ -1,5 +1,5 @@
 import { formatDate } from "@/lib/format";
-import { formatMoney, gstLabel, lineAmount, taxNumberLabel, totals } from "@/lib/money";
+import { formatMoney, gstLabel, lineAmount, registrationNumberLabel, taxNumberLabel, totals } from "@/lib/money";
 import type { Business, Customer, Quote } from "@/lib/types";
 import { BusinessBrand } from "./BusinessBrand";
 
@@ -31,6 +31,11 @@ export function QuoteDocument({
           <p className="mt-1 font-semibold">{business.name}</p>
           <p>{business.ownerName}</p>
           <p className="text-ink-soft">{business.address}</p>
+          {business.registrationNumber ? (
+            <p className="text-ink-soft">
+              {registrationNumberLabel(business.country)} {business.registrationNumber}
+            </p>
+          ) : null}
           <p className="text-ink-soft">{business.phone}</p>
           <p className="text-ink-soft">{business.email}</p>
           {business.gstRegistered && business.taxNumber ? (

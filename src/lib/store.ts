@@ -3,7 +3,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { generateJob } from "./ai";
-import { emptyBusiness, demoState, normalizeBusiness } from "./demo";
+import { emailsMatch, hashPassword, mobileMatches, passwordIsValid, verifyPassword } from "./auth";
+import { emptyBusiness, demoState, DEMO_LOGIN, normalizeBusiness } from "./demo";
 import { invoiceNumber, publicToken, quoteNumber, uid } from "./ids";
 import { addDays, todayIso } from "./money";
 import { canCreateQuote, planById } from "./plans";
@@ -33,15 +34,29 @@ const blank = (): Omit<AppState, "hydrated"> => ({
 interface Actions {
   setHydrated: (value: boolean) => void;
   login: (session: Session) => void;
+  signIn: (
+    email: string,
+    password: string,
+  ) => { ok: true } | { ok: false; reason: "missing" | "email" | "password" };
   register: (input: {
     ownerName: string;
     email: string;
+    password: string;
     businessName: string;
     trade: Business["trade"];
     country: Business["country"];
     city: string;
     phone: string;
-  }) => void;
+    address: string;
+    registrationNumber: string;
+    taxNumber: string;
+    gstRegistered: boolean;
+  }) => { ok: true } | { ok: false; reason: "password" };
+  resetPassword: (input: {
+    email: string;
+    mobile: string;
+    password: string;
+  }) => { ok: true } | { ok: false; reason: "email" | "mobile" | "password" };
   loadDemo: () => void;
   logout: () => void;
   updateBusiness: (patch: Partial<Business>) => void;
@@ -75,23 +90,49 @@ export const useStore = create<AppState & Actions>()(
 
       login: (session) => set({ session }),
 
+      signIn: (email, password) => {
+        if (emailsMatch(email, DEMO_LOGIN.email) && password === DEMO_LOGIN.password) {
+          set(demoState());
+          return { ok: true };
+        }
+        const session = get().session;
+        if (!session) return { ok: false, reason: "missing" };
+        if (!emailsMatch(session.email, email)) return { ok: false, reason: "email" };
+        if (!session.passwordHash) {
+          set({ session: { ...session, passwordHash: hashPassword(password) } });
+          return { ok: true };
+        }
+        if (!verifyPassword(password, session.passwordHash)) {
+          return { ok: false, reason: "password" };
+        }
+        return { ok: true };
+      },
+
       register: (input) => {
+        if (!passwordIsValid(input.password)) return { ok: false, reason: "password" };
         set({
-          session: { email: input.email, name: input.ownerName },
+          session: {
+            email: input.email.trim(),
+            name: input.ownerName.trim(),
+            passwordHash: hashPassword(input.password),
+          },
           business: {
             ...emptyBusiness(),
-            name: input.businessName,
-            ownerName: input.ownerName,
-            email: input.email,
-            phone: input.phone,
+            name: input.businessName.trim(),
+            ownerName: input.ownerName.trim(),
+            email: input.email.trim(),
+            phone: input.phone.trim(),
             trade: input.trade,
             country: input.country,
-            city: input.city,
-            region: input.city,
+            city: input.city.trim(),
+            region: input.city.trim(),
+            address: input.address.trim(),
+            registrationNumber: input.registrationNumber.trim(),
+            taxNumber: input.taxNumber.trim(),
             plan: "free",
-            gstRegistered: true,
+            gstRegistered: input.gstRegistered,
             paymentTermsDays: 7,
-            ccEmails: [input.email],
+            ccEmails: [input.email.trim()],
           },
           customers: [],
           quotes: [],
@@ -106,6 +147,25 @@ export const useStore = create<AppState & Actions>()(
           quoteSeq: 0,
           invoiceSeq: 0,
         });
+        return { ok: true };
+      },
+
+      resetPassword: (input) => {
+        const state = get();
+        if (!state.session || !emailsMatch(state.session.email, input.email)) {
+          return { ok: false, reason: "email" };
+        }
+        if (!mobileMatches(state.business.phone, input.mobile)) {
+          return { ok: false, reason: "mobile" };
+        }
+        if (!passwordIsValid(input.password)) return { ok: false, reason: "password" };
+        set({
+          session: {
+            ...state.session,
+            passwordHash: hashPassword(input.password),
+          },
+        });
+        return { ok: true };
       },
 
       loadDemo: () => set(demoState()),

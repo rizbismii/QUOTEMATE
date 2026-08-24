@@ -12,6 +12,7 @@ const business: Business = {
   city: "Auckland",
   region: "Auckland",
   address: "12 Richmond Road",
+  registrationNumber: "9429041234567",
   gstRegistered: true,
   taxNumber: "123-456-789",
   bankName: "Kiwibank",

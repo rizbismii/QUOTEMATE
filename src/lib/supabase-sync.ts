@@ -1,3 +1,4 @@
+import { publicSession } from "./auth";
 import { normalizeBusiness } from "./demo";
 import { DEMO_WORKSPACE_ID, getSupabase } from "./supabase";
 import type { AppState, Business, Customer, Invoice } from "./types";
@@ -61,7 +62,7 @@ export async function findPublicInvoice(token: string): Promise<{
 
 export function snapshotFromState(state: AppState): Snapshot {
   return {
-    session: state.session,
+    session: publicSession(state.session),
     business: normalizeBusiness(state.business),
     customers: state.customers,
     quotes: state.quotes,

@@ -29,6 +29,7 @@ export type SendChannel = "email" | "sms" | "whatsapp" | "link";
 export interface Session {
   email: string;
   name: string;
+  passwordHash?: string;
 }
 
 export interface Business {
@@ -41,6 +42,7 @@ export interface Business {
   city: string;
   region: string;
   address: string;
+  registrationNumber: string;
   gstRegistered: boolean;
   taxNumber: string;
   bankName: string;

@@ -11,29 +11,28 @@ import { FormEvent, useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const session = useStore((s) => s.session);
-  const login = useStore((s) => s.login);
+  const signIn = useStore((s) => s.signIn);
   const loadDemo = useStore((s) => s.loadDemo);
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (session && session.email.toLowerCase() === email.toLowerCase()) {
+    const result = signIn(email, password);
+    if (result.ok) {
       router.push("/app");
       return;
     }
-    if (email.toLowerCase() === DEMO_LOGIN.email) {
-      loadDemo();
-      router.push("/app");
-      return;
-    }
-    if (!session) {
+    if (result.reason === "missing") {
       setError("No account on this device yet. Register, or try the demo.");
       return;
     }
-    login(session);
-    router.push("/app");
+    if (result.reason === "email") {
+      setError("That email does not match the account saved on this device.");
+      return;
+    }
+    setError("Wrong password. Try again or reset it.");
   }
 
   return (
@@ -41,15 +40,33 @@ export default function LoginPage() {
       <Wordmark />
       <h1 className="mt-8 font-display text-4xl tracking-tight">Log in</h1>
       <p className="mt-2 text-sm text-ink-soft">
-        This demo keeps your job book in this browser. Use the same device you registered on.
+        Use the email and password you saved when you registered. This demo keeps your job book in
+        this browser.
       </p>
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <Field label="Email">
-          <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
         </Field>
-        <Field label="Password" hint="Any password works on this device demo.">
-          <Input type="password" required defaultValue="" />
+        <Field label="Password">
+          <Input
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+          />
         </Field>
+        <p className="text-sm">
+          <Link href="/forgot-password" className="font-semibold text-rust">
+            Forgot password?
+          </Link>
+        </p>
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
         <Button type="submit" className="w-full">
           Continue
@@ -64,7 +81,7 @@ export default function LoginPage() {
           router.push("/app");
         }}
       >
-        Try demo (sam@halefencing.co.nz)
+        Try demo ({DEMO_LOGIN.email})
       </Button>
       <p className="mt-6 text-sm text-steel">
         New business?{" "}

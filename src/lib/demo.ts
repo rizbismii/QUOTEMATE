@@ -1,6 +1,12 @@
+import { hashPassword } from "./auth";
 import { addDays, todayIso } from "./money";
 import { invoiceNumber, quoteNumber } from "./ids";
 import type { AppState, Business, Customer, Invoice, Quote } from "./types";
+
+export const DEMO_LOGIN = {
+  email: "sam@halefencing.co.nz",
+  password: "demo",
+};
 
 export const emptyBusiness = (): Business => ({
   name: "",
@@ -12,6 +18,7 @@ export const emptyBusiness = (): Business => ({
   city: "",
   region: "",
   address: "",
+  registrationNumber: "",
   gstRegistered: true,
   taxNumber: "",
   bankName: "",
@@ -255,6 +262,7 @@ export function demoState(): AppState {
     session: {
       email: "sam@halefencing.co.nz",
       name: "Sam Hale",
+      passwordHash: hashPassword(DEMO_LOGIN.password),
     },
     business: {
       name: "Hale & Co. Fencing",
@@ -266,6 +274,7 @@ export function demoState(): AppState {
       city: "Auckland",
       region: "Auckland",
       address: "12 Richmond Road, Grey Lynn, Auckland 1021",
+      registrationNumber: "9429041234567",
       gstRegistered: true,
       taxNumber: "123-456-789",
       bankName: "Kiwibank",
@@ -307,8 +316,3 @@ export function demoState(): AppState {
     invoiceSeq: 2,
   };
 }
-
-export const DEMO_LOGIN = {
-  email: "sam@halefencing.co.nz",
-  password: "demo",
-};

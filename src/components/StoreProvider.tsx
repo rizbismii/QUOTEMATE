@@ -45,8 +45,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const remote = await pullWorkspace();
       if (cancelled) return;
       if (remote?.session) {
+        const local = useStore.getState();
+        const sameAccount =
+          local.session &&
+          remote.session.email.toLowerCase() === local.session.email.toLowerCase();
         useStore.setState({
           ...remote,
+          session: {
+            email: remote.session.email,
+            name: remote.session.name,
+            passwordHash: sameAccount ? local.session?.passwordHash : remote.session.passwordHash,
+          },
           business: normalizeBusiness(remote.business),
           customers: remote.customers ?? [],
           quotes: remote.quotes ?? [],
