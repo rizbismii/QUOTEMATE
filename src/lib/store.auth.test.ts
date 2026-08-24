@@ -66,4 +66,21 @@ describe("register, login and password reset", () => {
     expect(useStore.getState().signIn("alex@reedplumbing.co.nz", "reedpass").ok).toBe(false);
     expect(useStore.getState().signIn("alex@reedplumbing.co.nz", "newreed1")).toEqual({ ok: true });
   });
+
+  it("saves a new password even when this browser has no job book", async () => {
+    useStore.setState({
+      signedIn: false,
+      session: null,
+      business: useStore.getState().business,
+    });
+    useStore.setState({ business: { ...useStore.getState().business, email: "", phone: "" } });
+    const { resetPasswordAnywhere } = await import("./cloud-auth");
+    const result = await resetPasswordAnywhere({
+      email: "muhammadurizwan@gmail.com",
+      mobile: "0273608080",
+      password: "newpass1",
+    });
+    expect(result).toEqual({ ok: true });
+    expect(useStore.getState().signIn("muhammadurizwan@gmail.com", "newpass1")).toEqual({ ok: true });
+  });
 });

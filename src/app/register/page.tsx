@@ -72,7 +72,7 @@ export default function RegisterPage() {
       <h1 className="mt-8 font-display text-4xl tracking-tight">Register your trade</h1>
       <p className="mt-2 text-sm text-ink-soft">
         GST, currency and quote language follow {country === "NZ" ? "New Zealand" : "Australia"}. Save
-        your password so you can log back in on this device.
+        your password so you can log back in on any phone.
       </p>
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <Field label="Your name">
@@ -84,7 +84,7 @@ export default function RegisterPage() {
         <Field label="Email">
           <Input name="email" type="email" required autoComplete="email" />
         </Field>
-        <Field label="Password" hint="At least 6 characters. Saved on this device.">
+        <Field label="Password" hint="At least 6 characters.">
           <Input name="password" type="password" required autoComplete="new-password" minLength={6} />
         </Field>
         <Field label="Confirm password">
