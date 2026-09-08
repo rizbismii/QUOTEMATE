@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/cn";
 import { useStore } from "@/lib/store";
-import { FileText, Home, Plus, Receipt, Wallet } from "lucide-react";
+import { FileText, Home, Mail, Plus, Receipt, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "./Logo";
@@ -27,16 +27,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/app">
             <Wordmark />
           </Link>
-          <Link
-            href="/app/settings"
-            className="flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs font-semibold"
-          >
-            {business.logoDataUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={business.logoDataUrl} alt="" className="h-5 w-5 rounded object-contain" />
-            ) : null}
-            {business.country} · {business.plan}
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/app/mail"
+              className="inline-flex items-center gap-1 rounded-full border border-line bg-card px-3 py-1 text-xs font-semibold"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Mail
+            </Link>
+            <Link
+              href="/app/settings"
+              className="flex items-center gap-2 rounded-full border border-line bg-card px-3 py-1 text-xs font-semibold"
+            >
+              {business.logoDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={business.logoDataUrl} alt="" className="h-5 w-5 rounded object-contain" />
+              ) : null}
+              {business.country} · {business.plan}
+            </Link>
+          </div>
         </div>
       </header>
 

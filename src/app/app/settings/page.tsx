@@ -4,6 +4,7 @@ import { Button } from "@/components/Button";
 import { CloudStatusCard } from "@/components/CloudStatusCard";
 import { Field, Input, Select, Textarea } from "@/components/Field";
 import { TRADE_LABELS } from "@/lib/ai";
+import { gmailLinkStatus, googleClientId, linkGmail, saveGoogleClientId, unlinkGmail } from "@/lib/gmail";
 import {
   registrationNumberHint,
   registrationNumberLabel,
@@ -17,17 +18,92 @@ import { useStore } from "@/lib/store";
 import type { Country, Trade } from "@/lib/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function SettingsPage() {
   const business = useStore((s) => s.business);
   const updateBusiness = useStore((s) => s.updateBusiness);
   const logout = useStore((s) => s.logout);
   const router = useRouter();
+  const [gmail, setGmail] = useState(gmailLinkStatus);
+  const [gmailBusy, setGmailBusy] = useState(false);
+  const [gmailError, setGmailError] = useState("");
+  const [clientId, setClientId] = useState(() => googleClientId(business.googleClientId));
 
   return (
     <div className="space-y-5">
       <h1 className="font-display text-3xl tracking-tight">Business</h1>
       <CloudStatusCard />
+      <div className="rounded-2xl border border-line bg-card p-4">
+        <p className="text-xs font-semibold uppercase tracking-wider text-steel">Email</p>
+        <p className="mt-1 font-semibold">
+          {gmail.linked ? `Gmail linked as ${gmail.email}` : "Send readable HTML quotes from the app"}
+        </p>
+        <p className="mt-1 text-xs text-steel">
+          Link Gmail so every contractor can tap Email and the customer receives the formatted quote
+          with Accept and Decline. Replies come back to your Gmail. Copies stay in Mail.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {gmail.linked ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                unlinkGmail();
+                setGmail({ linked: false, email: "" });
+              }}
+            >
+              Unlink Gmail
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              disabled={gmailBusy}
+              onClick={() => {
+                setGmailError("");
+                const id = clientId.trim();
+                saveGoogleClientId(id);
+                updateBusiness({ googleClientId: id });
+                setGmailBusy(true);
+                void linkGmail(id)
+                  .then((result) => {
+                    setGmail({ linked: true, email: result.email });
+                  })
+                  .catch(() => {
+                    setGmailError(
+                      id
+                        ? "Could not link Gmail. Check the Google Client ID and that this site is an authorised origin."
+                        : "Add a Google Client ID below, then tap Link Gmail.",
+                    );
+                  })
+                  .finally(() => setGmailBusy(false));
+              }}
+            >
+              {gmailBusy ? "Linking…" : "Link Gmail"}
+            </Button>
+          )}
+          <Link href="/app/mail" className="inline-flex items-center text-sm font-semibold text-rust">
+            Open Mail
+          </Link>
+        </div>
+        {gmailError ? <p className="mt-2 text-xs text-red-700">{gmailError}</p> : null}
+        {!gmail.linked ? (
+          <Field
+            label="Google Client ID"
+            hint="From Google Cloud → OAuth web client. Authorised origin: this website. Enables send from your Gmail for every contractor on this job book."
+          >
+            <Input
+              value={clientId}
+              onChange={(e) => {
+                setClientId(e.target.value);
+                saveGoogleClientId(e.target.value);
+                updateBusiness({ googleClientId: e.target.value.trim() });
+              }}
+              placeholder="123-abc.apps.googleusercontent.com"
+            />
+          </Field>
+        ) : null}
+      </div>
       <p className="text-sm text-ink-soft">
         These details print on quotes and invoices, including GST for {business.country === "NZ" ? "New Zealand" : "Australia"}.
       </p>

@@ -55,6 +55,7 @@ export interface Business {
   acceptVisa: boolean;
   acceptMastercard: boolean;
   acceptBankTransfer: boolean;
+  googleClientId: string;
 }
 
 export interface Customer {
@@ -133,6 +134,22 @@ export interface Activity {
   invoiceId?: string;
 }
 
+export type MailFolder = "inbox" | "sent";
+
+export interface MailItem {
+  id: string;
+  at: string;
+  folder: MailFolder;
+  from: string;
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+  quoteId?: string;
+  invoiceId?: string;
+  status: "sent" | "received";
+}
+
 export interface AppState {
   hydrated: boolean;
   signedIn: boolean;
@@ -142,6 +159,7 @@ export interface AppState {
   quotes: Quote[];
   invoices: Invoice[];
   activities: Activity[];
+  mails: MailItem[];
   quoteSeq: number;
   invoiceSeq: number;
 }

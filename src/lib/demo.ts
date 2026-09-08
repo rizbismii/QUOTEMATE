@@ -31,6 +31,7 @@ export const emptyBusiness = (): Business => ({
   acceptVisa: true,
   acceptMastercard: true,
   acceptBankTransfer: true,
+  googleClientId: "",
 });
 
 export function normalizeBusiness(input?: Partial<Business> | null): Business {
@@ -288,10 +289,24 @@ export function demoState(): AppState {
       acceptVisa: true,
       acceptMastercard: true,
       acceptBankTransfer: true,
+      googleClientId: "",
     },
     customers,
     quotes,
     invoices,
+    mails: [
+      {
+        id: "mail_demo_sent",
+        at: new Date(Date.now() - 3600000).toISOString(),
+        folder: "sent",
+        from: "sam@halefencing.co.nz",
+        to: "amy.wilson@example.com",
+        subject: "Quote QS-0003 from Hale & Co. Fencing",
+        text: "Quote QS-0003 sent to Amy Wilson.",
+        status: "sent",
+        quoteId: "quo_hedge",
+      },
+    ],
     activities: [
       {
         id: "act1",

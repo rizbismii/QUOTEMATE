@@ -6,7 +6,7 @@ import { formatMoney, invoiceIsOverdue, totals } from "@/lib/money";
 import { invoiceViewPath, quoteViewPath } from "@/lib/paths";
 import { formatQuoteAllowance } from "@/lib/plans";
 import { useStore } from "@/lib/store";
-import { ArrowRight, Camera } from "lucide-react";
+import { ArrowRight, Camera, Mail } from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardPage() {
@@ -45,6 +45,17 @@ export default function DashboardPage() {
         <span className="grid h-12 w-12 place-items-center rounded-full bg-rust">
           <Camera className="h-6 w-6" />
         </span>
+      </Link>
+
+      <Link
+        href="/app/mail"
+        className="flex items-center justify-between rounded-2xl border border-line bg-card p-4"
+      >
+        <div>
+          <p className="font-semibold">Mail</p>
+          <p className="text-xs text-steel">Send readable quotes. See customer accept and decline.</p>
+        </div>
+        <Mail className="h-5 w-5 text-rust" />
       </Link>
 
       <div className="grid grid-cols-2 gap-3">
