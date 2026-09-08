@@ -25,6 +25,7 @@ const business: Business = {
   acceptVisa: true,
   acceptMastercard: true,
   acceptBankTransfer: true,
+  googleClientId: "",
 };
 
 const customers: Customer[] = [

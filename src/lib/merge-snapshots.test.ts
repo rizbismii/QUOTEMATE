@@ -78,6 +78,7 @@ function snap(partial: Partial<Snapshot> = {}): Snapshot {
     quotes: [],
     invoices: [],
     activities: [],
+    mails: [],
     quoteSeq: 0,
     invoiceSeq: 0,
     ...partial,
@@ -266,5 +267,30 @@ describe("mergeSnapshots", () => {
       snap({ activities: [{ ...activity, id: "act_other" }] }),
     );
     expect(snapshot.activities).toHaveLength(1);
+  });
+
+  it("unions sent and inbox mail across devices", () => {
+    const sent = {
+      id: "mail_sent",
+      at: "2026-08-24T03:18:00.000Z",
+      folder: "sent" as const,
+      from: email,
+      to: "rizbismii@gmail.com",
+      subject: "Quote QS-0002 from Faz and co.",
+      text: "View quote",
+      status: "sent" as const,
+    };
+    const inbox = {
+      id: "mail_in",
+      at: "2026-08-24T03:21:00.000Z",
+      folder: "inbox" as const,
+      from: "rizbismii@gmail.com",
+      to: email,
+      subject: "QS-0001 declined",
+      text: "Customer declined QS-0001.",
+      status: "received" as const,
+    };
+    const { snapshot } = mergeSnapshots(snap({ mails: [sent] }), snap({ mails: [inbox, sent] }));
+    expect(snapshot.mails.map((item) => item.id).sort()).toEqual(["mail_in", "mail_sent"]);
   });
 });

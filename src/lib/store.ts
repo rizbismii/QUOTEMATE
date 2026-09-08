@@ -14,6 +14,7 @@ import type {
   Business,
   Customer,
   Invoice,
+  MailItem,
   Photo,
   PlanId,
   Quote,
@@ -29,6 +30,7 @@ const blank = (): Omit<AppState, "hydrated"> => ({
   quotes: [],
   invoices: [],
   activities: [],
+  mails: [],
   quoteSeq: 0,
   invoiceSeq: 0,
 });
@@ -91,6 +93,7 @@ interface Actions {
   convertToInvoice: (quoteId: string) => { ok: true; invoice: Invoice } | { ok: false; reason: "plan" | "missing" };
   markInvoicePaid: (id: string) => void;
   sendReminder: (id: string, via: SendChannel) => void;
+  recordMail: (mail: MailItem) => void;
 }
 
 export const useStore = create<AppState & Actions>()(
@@ -174,6 +177,7 @@ export const useStore = create<AppState & Actions>()(
               message: `Welcome to QuoteSnap — ${input.businessName} is ready to quote.`,
             },
           ],
+          mails: [],
           quoteSeq: 0,
           invoiceSeq: 0,
         });
@@ -216,6 +220,7 @@ export const useStore = create<AppState & Actions>()(
           quotes: snapshot.quotes ?? [],
           invoices: snapshot.invoices ?? [],
           activities: snapshot.activities ?? [],
+          mails: snapshot.mails ?? [],
           quoteSeq: snapshot.quoteSeq ?? 0,
           invoiceSeq: snapshot.invoiceSeq ?? 0,
         });
@@ -390,6 +395,20 @@ export const useStore = create<AppState & Actions>()(
             },
             ...state.activities,
           ].slice(0, 40),
+          mails: [
+            {
+              id: uid("mail"),
+              at: new Date().toISOString(),
+              folder: "inbox" as const,
+              from: state.customers.find((item) => item.id === quote.customerId)?.email || quote.number,
+              to: state.business.email,
+              subject: `${quote.number} accepted`,
+              text: `Customer accepted ${quote.number}.`,
+              quoteId: quote.id,
+              status: "received" as const,
+            },
+            ...(state.mails ?? []),
+          ].slice(0, 40),
         }));
         return get().quotes.find((item) => item.publicToken === token);
       },
@@ -408,6 +427,29 @@ export const useStore = create<AppState & Actions>()(
                 }
               : item,
           ),
+          activities: [
+            {
+              id: uid("act"),
+              at: new Date().toISOString(),
+              message: `Customer declined ${quote.number}`,
+              quoteId: quote.id,
+            },
+            ...state.activities,
+          ].slice(0, 40),
+          mails: [
+            {
+              id: uid("mail"),
+              at: new Date().toISOString(),
+              folder: "inbox" as const,
+              from: state.customers.find((item) => item.id === quote.customerId)?.email || quote.number,
+              to: state.business.email,
+              subject: `${quote.number} declined`,
+              text: `Customer declined ${quote.number}.`,
+              quoteId: quote.id,
+              status: "received" as const,
+            },
+            ...(state.mails ?? []),
+          ].slice(0, 40),
         }));
         return get().quotes.find((item) => item.publicToken === token);
       },
@@ -498,6 +540,11 @@ export const useStore = create<AppState & Actions>()(
             ...state.activities,
           ].slice(0, 40),
         })),
+
+      recordMail: (mail) =>
+        set((state) => ({
+          mails: [mail, ...(state.mails ?? []).filter((item) => item.id !== mail.id)].slice(0, 40),
+        })),
     }),
     {
       name: "quotesnap-v2",
@@ -515,6 +562,7 @@ export const useStore = create<AppState & Actions>()(
           hydrated: currentState.hydrated,
           signedIn: persisted.signedIn ?? Boolean(persisted.session),
           business: normalizeBusiness(persisted.business),
+          mails: persisted.mails ?? [],
         };
       },
     },

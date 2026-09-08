@@ -55,6 +55,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         invoices: useStore.getState().invoices ?? [],
         customers: useStore.getState().customers ?? [],
         quotes: useStore.getState().quotes ?? [],
+        mails: useStore.getState().mails ?? [],
       });
       setReady(true);
     };

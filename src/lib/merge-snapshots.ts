@@ -6,6 +6,7 @@ import type {
   Business,
   Customer,
   Invoice,
+  MailItem,
   PlanId,
   Quote,
   QuoteStatus,
@@ -186,6 +187,18 @@ function mergeActivities(local: Activity[], remote: Activity[]): Activity[] {
   return out.sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 40);
 }
 
+function mergeMails(local: MailItem[], remote: MailItem[]): MailItem[] {
+  const seen = new Set<string>();
+  const out: MailItem[] = [];
+  for (const item of [...local, ...remote]) {
+    const key = item.id || `${item.folder}|${item.at}|${item.subject}|${item.to}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out.sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 40);
+}
+
 function mergeBusiness(local: Business, remote: Business): Business {
   const localFilled = Boolean(local.name?.trim());
   const a = localFilled ? local : remote;
@@ -244,6 +257,7 @@ function fingerprint(snapshot: Snapshot): string {
       .sort(),
     customers: [...(snapshot.customers ?? [])].map((customer) => [customer.id, customer.email]).sort(),
     activities: [...(snapshot.activities ?? [])].map((activity) => activity.id).sort(),
+    mails: [...(snapshot.mails ?? [])].map((mail) => mail.id).sort(),
     quoteSeq: snapshot.quoteSeq,
     invoiceSeq: snapshot.invoiceSeq,
   });
@@ -267,6 +281,7 @@ export function mergeSnapshots(
   const invoices = mergeKeyed(local.invoices ?? [], remote.invoices ?? [], invoiceKeys, pickInvoice);
   const customers = mergeKeyed(local.customers ?? [], remote.customers ?? [], customerKeys, pickCustomer);
   const activities = mergeActivities(local.activities ?? [], remote.activities ?? []);
+  const mails = mergeMails(local.mails ?? [], remote.mails ?? []);
   const business = mergeBusiness(
     normalizeBusiness(local.business),
     normalizeBusiness(remote.business),
@@ -279,6 +294,7 @@ export function mergeSnapshots(
     quotes,
     invoices,
     activities,
+    mails,
     quoteSeq: seqFromQuoteNumbers(quotes, Math.max(local.quoteSeq || 0, remote.quoteSeq || 0)),
     invoiceSeq: seqFromInvoiceNumbers(invoices, Math.max(local.invoiceSeq || 0, remote.invoiceSeq || 0)),
   };

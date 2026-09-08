@@ -46,6 +46,7 @@ describe("auth", () => {
       quotes: [],
       invoices: [],
       activities: [],
+      mails: [],
       quoteSeq: 0,
       invoiceSeq: 0,
     });

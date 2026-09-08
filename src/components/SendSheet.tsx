@@ -5,7 +5,8 @@ import { formatDate } from "@/lib/format";
 import { publicInvoicePath, publicPayPath, publicQuotePath } from "@/lib/paths";
 import { payMethodLabel } from "@/lib/pay";
 import { quoteEmailHtml, quoteMailtoText } from "@/lib/quote-email";
-import { quoteEmailFileName, openQuoteEmail } from "@/lib/send-email";
+import { quoteEmailFileName } from "@/lib/send-email";
+import { deliverHtmlEmail, mailHint, sentMailItem } from "@/lib/mail-send";
 import { buildShareUrl, mailSubject, publicUrl, shareMessage } from "@/lib/share";
 import { useStore } from "@/lib/store";
 import type { Invoice, Quote, SendChannel } from "@/lib/types";
@@ -26,8 +27,10 @@ export function SendSheet({
   const customers = useStore((s) => s.customers);
   const sendQuote = useStore((s) => s.sendQuote);
   const sendReminder = useStore((s) => s.sendReminder);
+  const recordMail = useStore((s) => s.recordMail);
   const [copied, setCopied] = useState(false);
   const [emailHint, setEmailHint] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const record = quote ?? invoice;
   if (!record) return null;
@@ -46,7 +49,22 @@ export function SendSheet({
     : undefined;
   const sendHtml = quote
     ? quoteEmailHtml({ quote, business, customer, viewUrl: url, inlineImages: false })
-    : undefined;
+    : `<div style="font-family:Arial,sans-serif;color:#1c1814;padding:24px">
+        <h1 style="font-size:22px">${mailSubject(kind, record.number, business.name)}</h1>
+        <p>${shareMessage({
+          kind,
+          number: record.number,
+          title: invoice!.title,
+          totalLabel: formatMoney(money.total, business.country, true),
+          dueOrValid,
+          business,
+          customer,
+          url,
+          payUrl,
+          payMethodsLabel: payMethodLabel(business),
+        }).replace(/\n/g, "<br>")}</p>
+        ${payUrl ? `<p><a href="${payUrl}" style="background:#e24a1b;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:700">Pay now</a></p>` : ""}
+      </div>`;
   const body = quote
     ? quoteMailtoText({
         quote,
@@ -85,22 +103,32 @@ export function SendSheet({
 
   async function open(channel: SendChannel) {
     if (!customer) return;
-    if (channel === "email" && quote && sendHtml) {
-      mark(channel);
-      const how = await openQuoteEmail({
+    if (channel === "email") {
+      setBusy(true);
+      const how = await deliverHtmlEmail({
         from: business.email,
         to: customer.email,
         cc: cc || undefined,
+        replyTo: business.email,
         subject,
         html: sendHtml,
         text: body,
-        fileName: quoteEmailFileName(quote.number),
+        fileName: quoteEmailFileName(quote?.number || invoice!.number),
       });
-      setEmailHint(
-        how === "shared"
-          ? "Choose Mail or Gmail in the share list. The quote is HTML with Accept and Decline."
-          : "Formatted quote copied. If Gmail looks plain, tap the message and paste.",
+      setBusy(false);
+      mark(channel);
+      recordMail(
+        sentMailItem({
+          from: business.email,
+          to: customer.email,
+          subject,
+          text: body,
+          html: sendHtml,
+          quoteId: quote?.id,
+          invoiceId: invoice?.id,
+        }),
       );
+      setEmailHint(mailHint(how));
       return;
     }
     const href = buildShareUrl({
@@ -120,12 +148,12 @@ export function SendSheet({
     <div className="rounded-2xl border border-line bg-card p-4">
       <p className="font-display text-lg">Send to customer</p>
       <p className="mt-1 text-xs text-steel">
-        Email sends the formatted quote with Accept and Decline. Creator copy goes to{" "}
-        {cc || "your business email"}.
+        Email sends a readable HTML quote from the app when Gmail is linked. A copy is kept in Mail.
+        Creator copy goes to {cc || "your business email"}.
       </p>
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <Button type="button" variant="secondary" onClick={() => void open("email")}>
-          <Mail className="h-4 w-4" /> Email
+        <Button type="button" variant="secondary" disabled={busy} onClick={() => void open("email")}>
+          <Mail className="h-4 w-4" /> {busy ? "Sending…" : "Email"}
         </Button>
         <Button type="button" variant="secondary" onClick={() => void open("sms")}>
           <MessageSquare className="h-4 w-4" /> SMS

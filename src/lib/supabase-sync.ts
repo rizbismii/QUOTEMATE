@@ -1,7 +1,8 @@
 import { emailsMatch, normalizeEmail } from "./auth";
 import { DEMO_LOGIN, normalizeBusiness } from "./demo";
+import { uid } from "./ids";
 import { DEMO_WORKSPACE_ID, getSupabase } from "./supabase";
-import type { AppState, Business, Customer, Invoice, Quote } from "./types";
+import type { AppState, Business, Customer, Invoice, MailItem, Quote } from "./types";
 
 export type Snapshot = Omit<AppState, "hydrated">;
 
@@ -182,9 +183,30 @@ export async function patchPublicQuote(
     const next = quotes.map((item) =>
       item.publicToken === token ? { ...item, ...patch, updatedAt: new Date().toISOString() } : item,
     );
-    const snapshot = { ...payload, quotes: next };
+    const updated = next[index];
+    const customer = (payload.customers ?? []).find((item) => item.id === updated.customerId);
+    const status = patch.status;
+    const extraMail: MailItem | null =
+      status === "accepted" || status === "declined"
+        ? {
+            id: uid("mail"),
+            at: new Date().toISOString(),
+            folder: "inbox",
+            from: customer?.email || customer?.name || "Customer",
+            to: payload.business?.email || "",
+            subject: `${updated.number} ${status}`,
+            text: `${customer?.name || "Customer"} ${status} ${updated.number}.`,
+            quoteId: updated.id,
+            status: "received",
+          }
+        : null;
+    const snapshot = {
+      ...payload,
+      quotes: next,
+      mails: extraMail ? [extraMail, ...(payload.mails ?? [])].slice(0, 40) : payload.mails,
+    };
     await pushWorkspace(snapshot, row.id as string);
-    return next[index];
+    return updated;
   }
   return undefined;
 }
@@ -223,6 +245,7 @@ export function snapshotFromState(state: AppState): Snapshot {
     quotes: state.quotes,
     invoices: state.invoices,
     activities: state.activities,
+    mails: state.mails ?? [],
     quoteSeq: state.quoteSeq,
     invoiceSeq: state.invoiceSeq,
   };
